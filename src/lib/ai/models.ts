@@ -5,6 +5,7 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { xai } from "@ai-sdk/xai";
 import { LanguageModel } from "ai";
 import { openrouter } from "@openrouter/ai-sdk-provider";
+import { ChatModel } from "app-types/chat";
 
 const ollama = createOllama({
   baseURL: process.env.OLLAMA_BASE_URL || "http://localhost:11434/api",
@@ -60,27 +61,21 @@ export const isToolCallUnsupportedModel = (model: LanguageModel) => {
   ].includes(model);
 };
 
-export const DEFAULT_MODEL = "4o";
+const firstProvider = Object.keys(allModels)[0];
+const firstModel = Object.keys(allModels[firstProvider])[0];
 
-const fallbackModel = allModels.openai[DEFAULT_MODEL];
+const fallbackModel = allModels[firstProvider][firstModel];
 
 export const customModelProvider = {
-  modelsInfo: Object.keys(allModels).map((provider) => {
-    return {
-      provider,
-      models: Object.keys(allModels[provider]).map((name) => {
-        return {
-          name,
-          isToolCallUnsupported: isToolCallUnsupportedModel(
-            allModels[provider][name],
-          ),
-        };
-      }),
-    };
-  }),
-  getModel: (model?: string): LanguageModel => {
-    return (Object.values(allModels).find((models) => {
-      return models[model!];
-    })?.[model!] ?? fallbackModel) as LanguageModel;
+  modelsInfo: Object.entries(allModels).map(([provider, models]) => ({
+    provider,
+    models: Object.entries(models).map(([name, model]) => ({
+      name,
+      isToolCallUnsupported: isToolCallUnsupportedModel(model),
+    })),
+  })),
+  getModel: (model?: ChatModel): LanguageModel => {
+    if (!model) return fallbackModel;
+    return allModels[model.provider]?.[model.model] || fallbackModel;
   },
 };
