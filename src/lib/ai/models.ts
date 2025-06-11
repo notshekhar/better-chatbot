@@ -1,17 +1,22 @@
+// models.ts
 import { createOllama } from "ollama-ai-provider";
 import { openai } from "@ai-sdk/openai";
 import { google } from "@ai-sdk/google";
 import { anthropic } from "@ai-sdk/anthropic";
 import { xai } from "@ai-sdk/xai";
-import { LanguageModel } from "ai";
 import { openrouter } from "@openrouter/ai-sdk-provider";
+import { LanguageModel } from "ai";
+import {
+  createOpenAICompatibleModels,
+  openaiCompatibleModelsSafeParse,
+} from "./create-openai-compatiable";
 import { ChatModel } from "app-types/chat";
 
 const ollama = createOllama({
   baseURL: process.env.OLLAMA_BASE_URL || "http://localhost:11434/api",
 });
 
-export const allModels = {
+const staticModels = {
   openai: {
     "4o-mini": openai("gpt-4o-mini", {}),
     "gpt-4.1": openai("gpt-4.1"),
@@ -44,21 +49,37 @@ export const allModels = {
     "qwen3-8b:free": openrouter("qwen/qwen3-8b:free"),
     "qwen3-14b:free": openrouter("qwen/qwen3-14b:free"),
   },
-} as const;
+};
+
+const staticUnsupportedModels = new Set([
+  staticModels.openai["o4-mini"],
+  staticModels.xai["grok-3"],
+  staticModels.xai["grok-3-mini"],
+  staticModels.ollama["gemma3:1b"],
+  staticModels.ollama["gemma3:4b"],
+  staticModels.ollama["gemma3:12b"],
+  staticModels.openRouter["qwen3-8b:free"],
+  staticModels.openRouter["qwen3-14b:free"],
+]);
+
+const openaiCompatibleProviders = openaiCompatibleModelsSafeParse(
+  process.env.OPENAI_COMPATIBLE_DATA,
+);
+
+const {
+  providers: openaiCompatibleModels,
+  unsupportedModels: openaiCompatibleUnsupportedModels,
+} = createOpenAICompatibleModels(openaiCompatibleProviders);
+
+const allModels = { ...openaiCompatibleModels, ...staticModels };
+
+const allUnsupportedModels = new Set([
+  ...openaiCompatibleUnsupportedModels,
+  ...staticUnsupportedModels,
+]);
 
 export const isToolCallUnsupportedModel = (model: LanguageModel) => {
-  return [
-    allModels.openai["o4-mini"],
-    allModels.google["gemini-2.0-thinking"],
-    allModels.xai["grok-3"],
-    allModels.xai["grok-3-mini"],
-    allModels.google["gemini-2.0-thinking"],
-    allModels.ollama["gemma3:1b"],
-    allModels.ollama["gemma3:4b"],
-    allModels.ollama["gemma3:12b"],
-    allModels.openRouter["qwen3-8b:free"],
-    allModels.openRouter["qwen3-14b:free"],
-  ].includes(model);
+  return allUnsupportedModels.has(model);
 };
 
 const firstProvider = Object.keys(allModels)[0];
