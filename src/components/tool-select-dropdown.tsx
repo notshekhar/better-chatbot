@@ -1,21 +1,21 @@
-import { selectMcpClientsAction } from "@/app/api/mcp/actions";
 import { appStore } from "@/app/store";
 import { AppDefaultToolkit } from "app-types/chat";
 import { AllowedMCPServer, MCPServerInfo } from "app-types/mcp";
 import { cn } from "lib/utils";
 import {
+  AtSign,
   ChartColumn,
   ChevronRight,
   Loader,
   Package,
   Plus,
   Wrench,
+  WrenchIcon,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { PropsWithChildren, useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
-import useSWR from "swr";
 import { Badge } from "ui/badge";
 import { Button } from "ui/button";
 import { Checkbox } from "ui/checkbox";
@@ -43,11 +43,12 @@ import {
 import { Input } from "ui/input";
 import { MCPIcon } from "ui/mcp-icon";
 
-import { handleErrorWithToast } from "ui/shared-toast";
 import { useTranslations } from "next-intl";
 
 import { Switch } from "ui/switch";
 import { useShallow } from "zustand/shallow";
+import { Separator } from "ui/separator";
+import { useMcpList } from "@/hooks/queries/use-mcp-list";
 
 interface ToolSelectDropdownProps {
   align?: "start" | "end" | "center";
@@ -72,17 +73,10 @@ export function ToolSelectDropdown({
   side,
   disabled,
 }: PropsWithChildren<ToolSelectDropdownProps>) {
-  const [appStoreMutate, toolChoice] = appStore(
-    useShallow((state) => [state.mutate, state.toolChoice]),
-  );
+  const [toolChoice] = appStore(useShallow((state) => [state.toolChoice]));
   const t = useTranslations("Chat.Tool");
-  const { isLoading } = useSWR("mcp-list", selectMcpClientsAction, {
-    refreshInterval: 1000 * 60 * 1,
-    fallbackData: [],
-    onError: handleErrorWithToast,
-    onSuccess: (data) => {
-      appStoreMutate({ mcpList: data });
-    },
+  const { isLoading } = useMcpList({
+    refreshInterval: 1000 * 60 * 5,
   });
   return (
     <DropdownMenu>
@@ -91,28 +85,39 @@ export function ToolSelectDropdown({
           <Button
             variant={"outline"}
             className={cn(
-              "rounded-full font-semibold bg-secondary",
+              "rounded-full font-semibold bg-secondary data-[state=open]:bg-input/80!",
               toolChoice == "none" && "text-muted-foreground bg-transparent",
             )}
           >
-            {isLoading ? (
-              <Loader className="size-3.5 animate-spin" />
-            ) : (
-              <Wrench className="size-3.5 hidden sm:block" />
-            )}
             Tools
+            <Separator orientation="vertical" className="h-4 hidden sm:block" />
+            {isLoading ? (
+              <Loader className="size-3 animate-spin" />
+            ) : (
+              <AtSign className="size-3 hidden sm:block" />
+            )}
           </Button>
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent className="md:w-72" align={align} side={side}>
-        <DropdownMenuLabel>{t("toolsSetup")}</DropdownMenuLabel>
+        <DropdownMenuLabel className="flex items-center gap-2">
+          <WrenchIcon className="size-3.5" />
+          {t("toolsSetup")}
+        </DropdownMenuLabel>
+        <p className="text-xs text-muted-foreground w-full pl-8 pr-4 mb-2">
+          {t("toolsSetupDescription")}
+        </p>
+        <div className="py-1 ">
+          <DropdownMenuSeparator />
+        </div>
+
         <div className="py-2">
           <ToolPresets />
-          <div className="px-2 py-1">
+          <div className="py-1">
             <DropdownMenuSeparator />
           </div>
           <AppDefaultToolKitSelector />
-          <div className="px-2 py-1">
+          <div className="py-1">
             <DropdownMenuSeparator />
           </div>
           <McpServerSelector />
@@ -407,13 +412,15 @@ function McpServerSelector() {
                     );
                   }}
                   onToolClick={(toolName, checked) => {
+                    const currentTools = server.tools
+                      .filter((v) => v.checked)
+                      .map((v) => v.name);
+
                     setMcpServerTool(
                       server.id,
                       checked
-                        ? [toolName]
-                        : server.tools
-                            .filter((t) => t.name !== toolName)
-                            .map((t) => t.name),
+                        ? currentTools.concat(toolName)
+                        : currentTools.filter((v) => v !== toolName),
                     );
                   }}
                 />
@@ -478,7 +485,7 @@ function McpServerToolSelector({
       <div className="max-h-96 overflow-y-auto">
         {filteredTools.length === 0 ? (
           <div className="text-sm text-muted-foreground w-full h-full flex items-center justify-center py-6">
-            No tools available for this server.
+            {t("noResults")}
           </div>
         ) : (
           filteredTools.map((tool) => (

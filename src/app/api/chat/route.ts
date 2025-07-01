@@ -14,7 +14,7 @@ import { customModelProvider, isToolCallUnsupportedModel } from "lib/ai/models";
 import { mcpClientsManager } from "lib/ai/mcp/mcp-manager";
 
 import { chatRepository } from "lib/db/repository";
-import logger from "logger";
+import globalLogger from "logger";
 import {
   buildMcpServerCustomizationsSystemPrompt,
   buildProjectInstructionsSystemPrompt,
@@ -42,12 +42,17 @@ import {
   getAllowedDefaultToolkit,
   filterToolsByAllowedMCPServers,
   filterMcpServerCustomizations,
-} from "./helper";
+} from "./shared.chat";
 import {
   generateTitleFromUserMessageAction,
   rememberMcpServerCustomizationsAction,
 } from "./actions";
 import { getSession } from "auth/server";
+import { colorize } from "consola/utils";
+
+const logger = globalLogger.withDefaults({
+  message: colorize("blackBright", `Chat API: `),
+});
 
 export async function POST(request: Request) {
   try {
@@ -187,6 +192,10 @@ export async function POST(request: Request) {
             };
           })
           .unwrap();
+
+        logger.debug(
+          `tool mode: ${toolChoice}, binding tool count: ${Object.keys(vercelAITooles ?? {}).length}, model: ${chatModel?.provider}/${chatModel?.model}`,
+        );
 
         const result = streamText({
           model,
