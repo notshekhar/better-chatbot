@@ -47,11 +47,29 @@ export const ChatMentionSchema = z.discriminatedUnion("type", [
     serverId: z.string(),
   }),
   z.object({
+    type: z.literal("defaultTool"),
+    name: z.string(),
+    description: z.string().optional(),
+  }),
+  z.object({
     type: z.literal("mcpServer"),
     name: z.string(),
     description: z.string().optional(),
     toolCount: z.number().optional(),
     serverId: z.string(),
+  }),
+  z.object({
+    type: z.literal("workflow"),
+    name: z.string(),
+    description: z.string().optional(),
+    workflowId: z.string(),
+    icon: z
+      .object({
+        type: z.literal("emoji"),
+        value: z.string(),
+        style: z.record(z.string(), z.string()).optional(),
+      })
+      .optional(),
   }),
 ]);
 
@@ -66,6 +84,7 @@ export type ChatMessageAnnotation = {
 
 export enum AppDefaultToolkit {
   Visualization = "visualization",
+  WebSearch = "webSearch",
 }
 
 export const chatApiSchemaRequestBodySchema = z.object({

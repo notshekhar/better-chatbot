@@ -37,7 +37,8 @@
     "generatingInputWithAI": "Generando entrada con IA...",
     "inputGeneratedSuccessfully": "Entrada generada exitosamente",
     "failedToGenerateInput": "Error al generar entrada",
-    "createWithExample": "Crear con Ejemplo"
+    "createWithExample": "Crear con Ejemplo",
+    "resultsFound": "{count} resultados encontrados"
   },
   "Auth": {
     "SignIn": {
@@ -91,8 +92,10 @@
       "temporaryChatInstructionsPlaceholder": "Ingresa tus instrucciones aquí",
       "temporaryChatInstructionsDescription": "Puedes establecer instrucciones para el chat temporal. Esto se usará como prompt del sistema para el chat temporal."
     },
-    "placeholder": "¿Qué quieres saber?",
+    "placeholder": "Pregunta cualquier cosa o @menciona",
     "Tool": {
+      "webSearching": "Buscando en la web...",
+      "searchedTheWeb": "Buscado en la web",
       "toolModeDescription": "Elije cómo se usan las herramientas:\n• Auto: La IA decide cuándo usar herramientas\n• Manual: Pide permiso antes de usar herramientas\n• Ninguno: Desactiva todas las herramientas",
       "toolsSetupDescription": "Selecciona herramientas para tu chat.\nUsa '@' para mencionar y llamar\nherramientas durante la conversación.",
       "selectToolMode": "Seleccionar modo de herramientas",
@@ -109,7 +112,10 @@
       "presetNameAlreadyExists": "El nombre del preajuste ya existe",
       "presetSaved": "Preajuste guardado",
       "chartTools": "Herramientas de Gráficos",
-      "clickSaveAsPresetToGetStarted": "Haz clic en Guardar como Preajuste para comenzar."
+      "webSearchTools": "Buscar en la web",
+      "clickSaveAsPresetToGetStarted": "Haz clic en Guardar como Preajuste para comenzar.",
+      "searchOptions": "Opciones de Búsqueda",
+      "searchOptionsDescription": "Puedes pasar opciones de búsqueda al chatbot, como el número máximo de resultados de búsqueda, la fecha de búsqueda, etc."
     },
     "VoiceChat": {
       "title": "Modo de Chat por Voz",

@@ -25,6 +25,7 @@ import { OutputSchemaEditor } from "../output-schema-editor";
 import { defaultLLMNodeOutputSchema } from "lib/ai/workflow/create-ui-node";
 import { ObjectJsonSchema7 } from "app-types/util";
 import { toAny } from "lib/utils";
+import { notify } from "lib/notify";
 
 export const LLMNodeDataConfig = memo(function ({
   data,
@@ -121,7 +122,90 @@ export const LLMNodeDataConfig = memo(function ({
         </Button>
       </SelectModel>
 
-      {/* <Separator className="my-4" /> */}
+      <div className="flex items-center justify-between">
+        <Label className="text-sm">LLM {t("Workflow.outputSchema")}</Label>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-2">
+              <Label
+                className="text-xs font-normal text-muted-foreground"
+                htmlFor="structuredOutput"
+              >
+                {t("Workflow.structuredOutput")}
+              </Label>
+              <Switch
+                id="structuredOutput"
+                onClick={async () => {
+                  if (isStructuredOutput) {
+                    const ok = await notify.confirm({
+                      description: t("Workflow.structuredOutputSwitchConfirm"),
+                      okText: t("Workflow.structuredOutputSwitchConfirmOk"),
+                      cancelText: t(
+                        "Workflow.structuredOutputSwitchConfirmCancel",
+                      ),
+                    });
+                    if (!ok)
+                      return updateNodeData(data.id, {
+                        outputSchema: structuredClone(
+                          defaultLLMNodeOutputSchema,
+                        ),
+                      });
+                  }
+                  setStructuredOutputOpen(true);
+                }}
+                checked={isStructuredOutput}
+              />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent className="p-4 whitespace-pre-wrap">
+            {t("Workflow.structuredOutputDescription")}
+          </TooltipContent>
+        </Tooltip>
+      </div>
+      <div className="flex items-center flex-wrap gap-1">
+        {Object.keys(data.outputSchema.properties).flatMap((key) => {
+          if (
+            key === "answer" &&
+            data.outputSchema.properties[key].type === "object"
+          ) {
+            return Object.keys(
+              data.outputSchema.properties[key].properties ?? {},
+            ).map((property) => {
+              return (
+                <div
+                  key={`${key}.${property}`}
+                  className="flex items-center text-xs px-1.5 py-0.5 bg-secondary rounded-md"
+                >
+                  <VariableIcon className="size-3.5 text-blue-500" />
+                  <span className="font-semibold">{`${key}.${property}`}</span>
+                  <span className="text-muted-foreground ml-2">
+                    {
+                      toAny(
+                        data.outputSchema.properties[key].properties![property],
+                      )?.type
+                    }
+                  </span>
+                </div>
+              );
+            });
+          }
+
+          return [
+            <div
+              key={key}
+              className="flex items-center text-xs px-1.5 py-0.5 bg-secondary rounded-md"
+            >
+              <VariableIcon className="size-3.5 text-blue-500" />
+              <span className="font-semibold">{key}</span>
+              <span className="text-muted-foreground ml-2">
+                {data.outputSchema.properties[key].type}
+              </span>
+            </div>,
+          ];
+        })}
+      </div>
+
+      <Separator className="my-4" />
       <div className="flex items-center justify-between">
         <Label className="text-sm mt-1">Messages</Label>
         <Tooltip>
@@ -192,80 +276,7 @@ export const LLMNodeDataConfig = memo(function ({
           {t("Workflow.addMessage")}
         </Button>
       </div>
-      <Separator className="my-4" />
-      <div className="flex items-center justify-between">
-        <Label className="text-sm">LLM {t("Workflow.outputSchema")}</Label>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center gap-2">
-              <Label
-                className="text-xs font-normal text-muted-foreground"
-                htmlFor="structuredOutput"
-              >
-                {t("Workflow.structuredOutput")}
-              </Label>
-              <Switch
-                id="structuredOutput"
-                onClick={() => {
-                  if (isStructuredOutput) {
-                    updateNodeData(data.id, {
-                      outputSchema: structuredClone(defaultLLMNodeOutputSchema),
-                    });
-                  } else {
-                    setStructuredOutputOpen(true);
-                  }
-                }}
-                checked={isStructuredOutput}
-              />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent className="p-4 whitespace-pre-wrap">
-            {t("Workflow.structuredOutputDescription")}
-          </TooltipContent>
-        </Tooltip>
-      </div>
-      <div className="flex items-center flex-wrap gap-1">
-        {Object.keys(data.outputSchema.properties).flatMap((key) => {
-          if (
-            key === "answer" &&
-            data.outputSchema.properties[key].type === "object"
-          ) {
-            return Object.keys(
-              data.outputSchema.properties[key].properties ?? {},
-            ).map((property) => {
-              return (
-                <div
-                  key={`${key}.${property}`}
-                  className="flex items-center text-xs px-1.5 py-0.5 bg-secondary rounded-md"
-                >
-                  <VariableIcon className="size-3.5 text-blue-500" />
-                  <span className="font-semibold">{`${key}.${property}`}</span>
-                  <span className="text-muted-foreground ml-2">
-                    {
-                      toAny(
-                        data.outputSchema.properties[key].properties![property],
-                      )?.type
-                    }
-                  </span>
-                </div>
-              );
-            });
-          }
 
-          return [
-            <div
-              key={key}
-              className="flex items-center text-xs px-1.5 py-0.5 bg-secondary rounded-md"
-            >
-              <VariableIcon className="size-3.5 text-blue-500" />
-              <span className="font-semibold">{key}</span>
-              <span className="text-muted-foreground ml-2">
-                {data.outputSchema.properties[key].type}
-              </span>
-            </div>,
-          ];
-        })}
-      </div>
       <OutputSchemaEditor
         schema={data.outputSchema?.properties?.answer as ObjectJsonSchema7}
         open={structuredOutputOpen}
