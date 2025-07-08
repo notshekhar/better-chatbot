@@ -188,3 +188,12 @@ export type ChatRepository = {
     messages: PartialBy<ChatMessage, "createdAt">[],
   ): Promise<ChatMessage[]>;
 };
+
+export const ClientToolInvocationZodSchema = z.object({
+  action: z.enum(["manual", "direct"]),
+  result: z.any().optional(),
+});
+
+export type ClientToolInvocation = z.infer<
+  typeof ClientToolInvocationZodSchema
+>;

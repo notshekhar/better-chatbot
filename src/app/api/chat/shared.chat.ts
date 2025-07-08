@@ -13,6 +13,7 @@ import {
   ChatMention,
   ChatMessage,
   ChatMessageAnnotation,
+  ClientToolInvocationZodSchema,
   ToolInvocationUIPart,
 } from "app-types/chat";
 import { errorToString, objectFlow, toAny } from "lib/utils";
@@ -132,22 +133,30 @@ export function manualToolExecuteByLastMessage(
     },
   )?.toolInvocation as Extract<ToolInvocation, { state: "result" }>;
 
-  if (!manulConfirmation?.result) return MANUAL_REJECT_RESPONSE_PROMPT;
-
   const tool = tools[toolName];
 
   return safe(() => {
     if (!tool) throw new Error(`tool not found: ${toolName}`);
+
+    return ClientToolInvocationZodSchema.parse(manulConfirmation?.result);
   })
-    .map(() => {
-      if (tool.__$ref__ === "workflow") {
-        return tool.execute!(args, {
-          toolCallId: part.toolInvocation.toolCallId,
-          abortSignal: abortSignal ?? new AbortController().signal,
-          messages: [],
-        });
+    .map((result) => {
+      const value = result?.result;
+      if (result.action == "direct") {
+        console.log(value);
+        return value;
+      } else if (result.action == "manual") {
+        if (!value) return MANUAL_REJECT_RESPONSE_PROMPT;
+        if (tool.__$ref__ === "workflow") {
+          return tool.execute!(args, {
+            toolCallId: part.toolInvocation.toolCallId,
+            abortSignal: abortSignal ?? new AbortController().signal,
+            messages: [],
+          });
+        }
+        return callMcpToolAction(tool._mcpServerId, tool._originToolName, args);
       }
-      return callMcpToolAction(tool._mcpServerId, tool._originToolName, args);
+      throw new Error("Invalid Client Tool Invocation Action " + result.action);
     })
     .ifFail((error) => ({
       isError: true,

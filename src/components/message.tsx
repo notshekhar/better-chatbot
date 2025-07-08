@@ -17,6 +17,7 @@ import { Think } from "ui/think";
 import { Terminal, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "ui/button";
 import { useTranslations } from "next-intl";
+import { ChatMessageAnnotation, ClientToolInvocation } from "app-types/chat";
 
 interface Props {
   message: UIMessage;
@@ -26,7 +27,7 @@ interface Props {
   setMessages: UseChatHelpers["setMessages"];
   reload: UseChatHelpers["reload"];
   className?: string;
-  onPoxyToolCall?: (answer: boolean) => void;
+  onPoxyToolCall?: (result: ClientToolInvocation) => void;
   status: UseChatHelpers["status"];
   messageIndex: number;
   isError?: boolean;
@@ -119,10 +120,14 @@ const PurePreviewMessage = ({
 
             if (part.type === "tool-invocation") {
               const isLast = isLastMessage && isLastPart;
+              const isManualToolInvocation = (
+                message.annotations as ChatMessageAnnotation[]
+              )?.some((a) => a.toolChoice == "manual");
               return (
                 <ToolMessagePart
                   isLast={isLast}
                   messageId={message.id}
+                  isManualToolInvocation={isManualToolInvocation}
                   showActions={
                     isLastMessage ? isLastPart && !isLoading : isLastPart
                   }

@@ -48,6 +48,7 @@ import {
   ChatMentionSchema,
   ChatMessageAnnotation,
   ChatModel,
+  ClientToolInvocation,
 } from "app-types/chat";
 
 import { Skeleton } from "ui/skeleton";
@@ -75,6 +76,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "ui/hover-card";
 import { notify } from "lib/notify";
 import { DefaultToolName } from "lib/ai/tools";
 import { TavilyResponse } from "lib/ai/tools/web/web-search";
+import { safeJsRun } from "lib/safe-js-run";
 
 type MessagePart = UIMessage["parts"][number];
 
@@ -107,7 +109,8 @@ interface ToolMessagePartProps {
   messageId: string;
   showActions: boolean;
   isLast?: boolean;
-  onPoxyToolCall?: (answer: boolean) => void;
+  isManualToolInvocation?: boolean;
+  onPoxyToolCall?: (result: ClientToolInvocation) => void;
   isError?: boolean;
   setMessages?: UseChatHelpers["setMessages"];
 }
@@ -397,6 +400,7 @@ export const ToolMessagePart = memo(
     isError,
     messageId,
     setMessages,
+    isManualToolInvocation,
   }: ToolMessagePartProps) => {
     const t = useTranslations("");
     const { toolInvocation } = part;
@@ -442,7 +446,7 @@ export const ToolMessagePart = memo(
           : toolInvocation.result;
       }
       return null;
-    }, [state, toolInvocation]);
+    }, [state, toolInvocation, onPoxyToolCall]);
 
     const CustomToolComponent = useMemo(() => {
       if (
@@ -450,6 +454,24 @@ export const ToolMessagePart = memo(
         toolName === DefaultToolName.WebContent
       ) {
         return <SearchToolPart part={toolInvocation} />;
+      }
+
+      if (toolName === DefaultToolName.JsExecution) {
+        console.log(`has proxy tool call ${!!onPoxyToolCall},${state}`);
+        return (
+          <JsExecutionToolPart
+            part={toolInvocation}
+            onResult={
+              onPoxyToolCall
+                ? (result) =>
+                    onPoxyToolCall?.({
+                      action: "direct",
+                      result,
+                    })
+                : undefined
+            }
+          />
+        );
       }
 
       if (state === "result") {
@@ -490,7 +512,7 @@ export const ToolMessagePart = memo(
         }
       }
       return null;
-    }, [toolName, state]);
+    }, [toolName, state, onPoxyToolCall]);
 
     const isWorkflowTool = isVercelAIWorkflowTool(result);
 
@@ -639,13 +661,15 @@ export const ToolMessagePart = memo(
                   </div>
                 )}
 
-                {onPoxyToolCall && (
+                {onPoxyToolCall && isManualToolInvocation && (
                   <div className="flex flex-row gap-2 items-center mt-2">
                     <Button
                       variant="secondary"
                       size="sm"
                       className="rounded-full text-xs hover:ring"
-                      onClick={() => onPoxyToolCall(true)}
+                      onClick={() =>
+                        onPoxyToolCall({ action: "manual", result: true })
+                      }
                     >
                       <Check />
                       {t("Common.approve")}
@@ -654,7 +678,9 @@ export const ToolMessagePart = memo(
                       variant="outline"
                       size="sm"
                       className="rounded-full text-xs"
-                      onClick={() => onPoxyToolCall(false)}
+                      onClick={() =>
+                        onPoxyToolCall({ action: "manual", result: false })
+                      }
                     >
                       <X />
                       {t("Common.reject")}
@@ -1063,6 +1089,44 @@ export function WorkflowToolDetail({
         );
       })}
       <div className="px-2 mt-2">{output}</div>
+    </div>
+  );
+}
+
+export function JsExecutionToolPart({
+  part,
+  onResult,
+}: {
+  part: ToolMessagePart["toolInvocation"];
+  onResult?: (result?: any) => void;
+}) {
+  const isRun = useRef(false);
+  const runCode = useCallback(
+    async (code: string, input: any, timeout?: number) => {
+      console.log("runCode", code, input, timeout);
+      const result = await safeJsRun(code, input, timeout);
+      console.log("result", result);
+      onResult?.(result);
+    },
+    [onResult],
+  );
+
+  useEffect(() => {
+    if (onResult && part.args && part.state == "call" && !isRun.current) {
+      isRun.current = true;
+      runCode(part.args.code, part.args.input, part.args.timeout);
+    }
+  }, [part.state, !!onResult]);
+
+  return (
+    <div>
+      <p>{part.state}</p>
+      <JsonView data={part} />
+      <Markdown>{`
+\`\`\`javascript
+${part.args?.code}
+\`\`\`
+`}</Markdown>
     </div>
   );
 }
