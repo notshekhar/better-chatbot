@@ -46,7 +46,7 @@ export function filterMCPToolsByMentions(
     return tools;
   }
   const toolMentions = mentions.filter(
-    (mention) => mention.type == "tool" || mention.type == "mcpServer",
+    (mention) => mention.type == "mcpTool" || mention.type == "mcpServer",
   );
 
   const metionsByServer = toolMentions.reduce(
@@ -59,13 +59,10 @@ export function filterMCPToolsByMentions(
           ),
         };
       }
-      if (mention.type == "tool") {
-        return {
-          ...acc,
-          [mention.serverId]: [...(acc[mention.serverId] ?? []), mention.name],
-        };
-      }
-      return acc;
+      return {
+        ...acc,
+        [mention.serverId]: [...(acc[mention.serverId] ?? []), mention.name],
+      };
     },
     {} as Record<string, string[]>,
   ); // {serverId: [toolName1, toolName2]}

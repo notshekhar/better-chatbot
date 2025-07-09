@@ -23,7 +23,7 @@ export const APP_DEFAULT_TOOL_KIT: Record<
   [AppDefaultToolkit.Http]: {
     [DefaultToolName.Http]: httpFetchTool,
   },
-  [AppDefaultToolkit.JsExecution]: {
-    [DefaultToolName.JsExecution]: jsExecutionTool,
+  [AppDefaultToolkit.Code]: {
+    [DefaultToolName.JavascriptExecution]: jsExecutionTool,
   },
 };

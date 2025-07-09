@@ -2,7 +2,7 @@ export enum AppDefaultToolkit {
   Visualization = "visualization",
   WebSearch = "webSearch",
   Http = "http",
-  JsExecution = "jsExecution",
+  Code = "code",
 }
 
 export enum DefaultToolName {
@@ -12,5 +12,5 @@ export enum DefaultToolName {
   WebSearch = "webSearch",
   WebContent = "webContent",
   Http = "http",
-  JsExecution = "jsExecution",
+  JavascriptExecution = "mini-javascript-execution",
 }

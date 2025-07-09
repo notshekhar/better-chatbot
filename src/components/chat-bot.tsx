@@ -22,11 +22,7 @@ import { UIMessage } from "ai";
 
 import { safe } from "ts-safe";
 import { mutate } from "swr";
-import {
-  ChatApiSchemaRequestBody,
-  ChatMessageAnnotation,
-  ClientToolInvocation,
-} from "app-types/chat";
+import { ChatApiSchemaRequestBody, ClientToolInvocation } from "app-types/chat";
 import { useToRef } from "@/hooks/use-latest";
 import { isShortcutEvent, Shortcuts } from "lib/keyboard-shortcuts";
 import { Button } from "ui/button";

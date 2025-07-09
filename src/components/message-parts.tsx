@@ -456,10 +456,10 @@ export const ToolMessagePart = memo(
         return <SearchToolPart part={toolInvocation} />;
       }
 
-      if (toolName === DefaultToolName.JsExecution) {
+      if (toolName === DefaultToolName.JavascriptExecution) {
         console.log(`has proxy tool call ${!!onPoxyToolCall},${state}`);
         return (
-          <JsExecutionToolPart
+          <SimpleJavascriptExecutionToolPart
             part={toolInvocation}
             onResult={
               onPoxyToolCall
@@ -1093,7 +1093,7 @@ export function WorkflowToolDetail({
   );
 }
 
-export function JsExecutionToolPart({
+export function SimpleJavascriptExecutionToolPart({
   part,
   onResult,
 }: {

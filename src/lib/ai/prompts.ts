@@ -74,7 +74,7 @@ export const mentionPrompt = `
 
 <example>
 - User: "@tool('weather') Check the weather" (missing location parameter)
-- Response: "Which location would you like to check the weather for? For example: Seoul, New York, Tokyo. Please mention the tool again using @tool('weather') when providing the location, as I can only access tools when they are explicitly mentioned."
+- Response: "Which location would you like to check the weather for? For example: Seoul, New York, Tokyo. Please mention the tool again using \`@tool('weather')\` when providing the location, as I can only access tools when they are explicitly mentioned."
 </example>
 
 
