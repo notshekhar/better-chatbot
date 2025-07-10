@@ -198,7 +198,7 @@
     "Tool": {
       "webSearching": "Searching the Web...",
       "searchedTheWeb": "Searched the Web",
-      "toolsSetupDescription": "Select tools for your chat.\nUse '@' to mention and call tools\nduring conversation.",
+      "toolsSetupDescription": "Select tools that the chatbot can use.\nThe chatbot will use selected tools based on its own judgment.\n\nYou can also force the use of specific tools through @mention.",
       "selectToolMode": "Select a tool mode",
       "autoToolModeDescription": "Decides when to use tools without asking you",
       "manualToolModeDescription": "Asks your permission before using any tools",

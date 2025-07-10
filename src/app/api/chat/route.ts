@@ -180,7 +180,6 @@ export async function POST(request: Request) {
           .orElse({});
 
         if (inProgressToolStep) {
-          console.log(`progressTool...`);
           const toolResult = await manualToolExecuteByLastMessage(
             inProgressToolStep,
             message,
@@ -223,7 +222,9 @@ export async function POST(request: Request) {
         const vercelAITooles = safe(MCP_TOOLS)
           .map((t) => {
             const bindingTools =
-              toolChoice === "manual" ? excludeToolExecution(t) : t;
+              toolChoice === "manual" && mentions.length == 0
+                ? excludeToolExecution(t)
+                : t;
             return {
               ...bindingTools,
               ...APP_DEFAULT_TOOLS,

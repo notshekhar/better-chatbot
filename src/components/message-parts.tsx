@@ -16,6 +16,7 @@ import {
   XIcon,
   Loader2,
   AlertTriangleIcon,
+  Terminal,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "ui/tooltip";
 import { Button } from "ui/button";
@@ -77,6 +78,8 @@ import { notify } from "lib/notify";
 import { DefaultToolName } from "lib/ai/tools";
 import { TavilyResponse } from "lib/ai/tools/web/web-search";
 import { safeJsRun } from "lib/safe-js-run";
+
+import { CodeBlock } from "ui/CodeBlock";
 
 type MessagePart = UIMessage["parts"][number];
 
@@ -446,7 +449,7 @@ export const ToolMessagePart = memo(
           : toolInvocation.result;
       }
       return null;
-    }, [state, toolInvocation, onPoxyToolCall]);
+    }, [toolInvocation, onPoxyToolCall]);
 
     const CustomToolComponent = useMemo(() => {
       if (
@@ -512,7 +515,7 @@ export const ToolMessagePart = memo(
         }
       }
       return null;
-    }, [toolName, state, onPoxyToolCall]);
+    }, [toolName, state, onPoxyToolCall, result]);
 
     const isWorkflowTool = isVercelAIWorkflowTool(result);
 
@@ -1101,11 +1104,12 @@ export function SimpleJavascriptExecutionToolPart({
   onResult?: (result?: any) => void;
 }) {
   const isRun = useRef(false);
+
+  const blockRef = useRef<HTMLDivElement>(null);
+
   const runCode = useCallback(
     async (code: string, input: any, timeout?: number) => {
-      console.log("runCode", code, input, timeout);
       const result = await safeJsRun(code, input, timeout);
-      console.log("result", result);
       onResult?.(result);
     },
     [onResult],
@@ -1118,15 +1122,122 @@ export function SimpleJavascriptExecutionToolPart({
     }
   }, [part.state, !!onResult]);
 
+  useEffect(() => {
+    if (part.state != "result") {
+      const closeKey = setTimeout(() => {
+        blockRef.current?.scrollTo({
+          top: blockRef.current?.scrollHeight,
+          behavior: "smooth",
+        });
+      }, 500);
+      return () => clearTimeout(closeKey);
+    }
+  }, [part.state]);
+
   return (
-    <div>
+    <div className="flex flex-col">
       <p>{part.state}</p>
       <JsonView data={part} />
-      <Markdown>{`
-\`\`\`javascript
-${part.args?.code}
-\`\`\`
-`}</Markdown>
+      <div className="flex items-center gap-1 mt-4">
+        <Loader className="size-3.5 animate-spin text-muted-foreground" />
+        <TextShimmer className="">Generating Code...</TextShimmer>
+      </div>
+      <div className="p-5">
+        {!!part.args?.code && (
+          <div className="border relative rounded-lg overflow-hidden bg-background shadow fade-in animate-in duration-500">
+            <div className="py-2.5 px-4 flex items-center gap-1.5 z-20 border-b bg-background">
+              <Terminal className="size-3 text-muted-foreground " />
+              <div className="flex-1" />
+              <div className="w-1.5 h-1.5 rounded-full bg-input" />
+              <div className="w-1.5 h-1.5 rounded-full bg-input" />
+              <div className="w-1.5 h-1.5 rounded-full bg-input" />
+            </div>
+            <div className="relative">
+              <div
+                className={`z-10 absolute inset-0 w-full h-1/4 bg-gradient-to-b to-90%  to-transparent ${part.state != "result" ? "from-background pointer-events-none" : "from-transparent"}`}
+              />
+              <div
+                className={`z-10 absolute inset-0 w-1/4 h-full bg-gradient-to-r  to-transparent ${part.state != "result" ? "from-background pointer-events-none" : "from-transparent"}`}
+              />
+              <div
+                className={`z-10 absolute left-0 bottom-0 w-full h-1/4 bg-gradient-to-t  to-transparent ${part.state != "result" ? "from-background pointer-events-none" : "from-transparent"}`}
+              />
+              <div
+                className={`z-10 absolute right-0 bottom-0 w-1/4 h-full bg-gradient-to-l  to-transparent ${part.state != "result" ? "from-background pointer-events-none" : "from-transparent"}`}
+              />
+              <div
+                ref={blockRef}
+                className={`min-h-14 p-6 text-xs overflow-y-auto transition-height duration-1000 ${part.state != "result" ? "max-h-32" : "max-h-60"}`}
+              >
+                <CodeBlock
+                  className="bg-background p-2"
+                  code={part.args?.code || ""}
+                  //                   code={`import { z } from "zod";
+
+                  //                 <div className="p-4 relative">
+                  //           <div className="z-10 absolute inset-0 w-full h-1/4 bg-gradient-to-b to-90% from-background to-transparent  pointer-events-none" />
+                  //           <div className="z-10 absolute inset-0 w-1/4 h-full bg-gradient-to-r from-background to-transparent  pointer-events-none" />
+                  //           <div className="z-10 absolute left-0 bottom-0 w-full h-1/4 bg-gradient-to-t from-background to-transparent  pointer-events-none" />
+                  //           <div className="z-10 absolute right-0 bottom-0 w-1/4 h-full bg-gradient-to-l from-background to-transparent  pointer-events-none" />
+                  //           <div ref={blockRef} className="p-6 text-xs  max-h-96 overflow-y-auto">
+
+                  // export type UserPreferences = {
+                  //   displayName?: string;
+                  //   profession?: string; // User's job or profession
+                  //   responseStyleExample?: string; // Example of preferred response style
+                  // };
+
+                  // export type User = {
+                  //   id: string;
+                  //   name: string;
+                  //   email: string;
+                  //   image: string | null;
+                  //   preferences?: UserPreferences;
+                  // };
+
+                  // export type UserRepository = {
+                  //   existsByEmail: (email: string) => Promise<boolean>;
+                  //   updateUser: (id: string, user: Pick<User, "name" | "image">) => Promise<User>;
+                  //   updatePreferences: (
+                  //     userId: string,
+                  //     preferences: UserPreferences,
+                  //   ) => Promise<User>;
+                  //   getPreferences: (userId: string) => Promise<UserPreferences | null>;
+                  //   findById: (userId: string) => Promise<User | null>;
+                  // };
+
+                  // export const UserZodSchema = z.object({
+                  //   name: z.string().min(1),
+                  //   email: z.string().email(),
+                  //   password: z.string().min(8),
+                  // });
+
+                  // export const UserPreferencesZodSchema = z.object({
+                  //   displayName: z.string().optional(),
+                  //   profession: z.string().optional(),
+                  //   responseStyleExample: z.string().optional(),
+                  // });
+                  // `.trim()}
+                  lang="javascript"
+                  fallback={<CodeFallback />}
+                />
+              </div>
+              <div></div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CodeFallback() {
+  return (
+    <div className="flex flex-col gap-2">
+      <Skeleton className="h-3 w-1/6" />
+      <Skeleton className="h-3 w-1/3" />
+      <Skeleton className="h-3 w-1/2" />
+      <Skeleton className="h-3 w-1/4" />
     </div>
   );
 }

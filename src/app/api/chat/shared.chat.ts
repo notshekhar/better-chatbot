@@ -143,7 +143,6 @@ export function manualToolExecuteByLastMessage(
     .map((result) => {
       const value = result?.result;
       if (result.action == "direct") {
-        console.log({ value });
         return value;
       } else if (result.action == "manual") {
         if (!value) return MANUAL_REJECT_RESPONSE_PROMPT;
