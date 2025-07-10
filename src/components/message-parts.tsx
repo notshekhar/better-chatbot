@@ -77,9 +77,9 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "ui/hover-card";
 import { notify } from "lib/notify";
 import { DefaultToolName } from "lib/ai/tools";
 import { TavilyResponse } from "lib/ai/tools/web/web-search";
-import { safeJsRun } from "lib/safe-js-run";
 
 import { CodeBlock } from "ui/CodeBlock";
+import { safeJsRun } from "lib/safe-js-run";
 
 type MessagePart = UIMessage["parts"][number];
 
@@ -1138,11 +1138,11 @@ export function SimpleJavascriptExecutionToolPart({
     <div className="flex flex-col">
       <p>{part.state}</p>
       <JsonView data={part} />
-      <div className="flex items-center gap-1 mt-4">
+      <div className="flex items-center gap-1 mt-4 px-2">
         <Loader className="size-3.5 animate-spin text-muted-foreground" />
         <TextShimmer className="">Generating Code...</TextShimmer>
       </div>
-      <div className="p-5">
+      <div className="px-6 py-3">
         {!!part.args?.code && (
           <div className="border relative rounded-lg overflow-hidden bg-background shadow fade-in animate-in duration-500">
             <div className="py-2.5 px-4 flex items-center gap-1.5 z-20 border-b bg-background">
@@ -1171,58 +1171,12 @@ export function SimpleJavascriptExecutionToolPart({
               >
                 <CodeBlock
                   className="bg-background p-2"
-                  code={part.args?.code || ""}
-                  //                   code={`import { z } from "zod";
-
-                  //                 <div className="p-4 relative">
-                  //           <div className="z-10 absolute inset-0 w-full h-1/4 bg-gradient-to-b to-90% from-background to-transparent  pointer-events-none" />
-                  //           <div className="z-10 absolute inset-0 w-1/4 h-full bg-gradient-to-r from-background to-transparent  pointer-events-none" />
-                  //           <div className="z-10 absolute left-0 bottom-0 w-full h-1/4 bg-gradient-to-t from-background to-transparent  pointer-events-none" />
-                  //           <div className="z-10 absolute right-0 bottom-0 w-1/4 h-full bg-gradient-to-l from-background to-transparent  pointer-events-none" />
-                  //           <div ref={blockRef} className="p-6 text-xs  max-h-96 overflow-y-auto">
-
-                  // export type UserPreferences = {
-                  //   displayName?: string;
-                  //   profession?: string; // User's job or profession
-                  //   responseStyleExample?: string; // Example of preferred response style
-                  // };
-
-                  // export type User = {
-                  //   id: string;
-                  //   name: string;
-                  //   email: string;
-                  //   image: string | null;
-                  //   preferences?: UserPreferences;
-                  // };
-
-                  // export type UserRepository = {
-                  //   existsByEmail: (email: string) => Promise<boolean>;
-                  //   updateUser: (id: string, user: Pick<User, "name" | "image">) => Promise<User>;
-                  //   updatePreferences: (
-                  //     userId: string,
-                  //     preferences: UserPreferences,
-                  //   ) => Promise<User>;
-                  //   getPreferences: (userId: string) => Promise<UserPreferences | null>;
-                  //   findById: (userId: string) => Promise<User | null>;
-                  // };
-
-                  // export const UserZodSchema = z.object({
-                  //   name: z.string().min(1),
-                  //   email: z.string().email(),
-                  //   password: z.string().min(8),
-                  // });
-
-                  // export const UserPreferencesZodSchema = z.object({
-                  //   displayName: z.string().optional(),
-                  //   profession: z.string().optional(),
-                  //   responseStyleExample: z.string().optional(),
-                  // });
-                  // `.trim()}
+                  code={part.args?.code}
                   lang="javascript"
                   fallback={<CodeFallback />}
                 />
               </div>
-              <div></div>
+              <div className="border-t py-2.5 px-4">{/* logs */}</div>
             </div>
           </div>
         )}

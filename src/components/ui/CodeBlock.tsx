@@ -13,7 +13,7 @@ export function CodeBlock({
   lang,
   fallback,
   className,
-}: { code: string; lang: string; fallback?: ReactNode; className?: string }) {
+}: { code?: string; lang: string; fallback?: ReactNode; className?: string }) {
   const { theme } = useTheme();
 
   const [component, setComponent] = useState<JSX.Element | null>(null);
@@ -21,7 +21,7 @@ export function CodeBlock({
   useLayoutEffect(() => {
     safe()
       .map(async () => {
-        const out = await codeToHast(code, {
+        const out = await codeToHast(code || "", {
           lang: lang,
           theme: theme == "dark" ? "dark-plus" : "github-light",
         });
@@ -45,6 +45,8 @@ export function CodeBlock({
       })
       .ifOk(setComponent);
   }, [theme, lang, code]);
+
+  if (!code) return fallback;
 
   return component ?? fallback;
 }
