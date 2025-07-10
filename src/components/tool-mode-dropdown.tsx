@@ -8,12 +8,13 @@ import {
 } from "lib/keyboard-shortcuts";
 import {
   Check,
+  CheckIcon,
   ClipboardCheck,
   Infinity,
   PenOff,
   Settings2,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "ui/button";
 import { useTranslations } from "next-intl";
 
@@ -30,6 +31,10 @@ import {
 
 import { useShallow } from "zustand/shallow";
 import { Tooltip, TooltipContent, TooltipTrigger } from "ui/tooltip";
+import { Badge } from "ui/badge";
+import { capitalizeFirstLetter, createDebounce } from "lib/utils";
+
+const debounce = createDebounce();
 
 export const ToolModeDropdown = ({ disabled }: { disabled?: boolean }) => {
   const t = useTranslations("Chat.Tool");
@@ -37,6 +42,8 @@ export const ToolModeDropdown = ({ disabled }: { disabled?: boolean }) => {
     useShallow((state) => [state.toolChoice, state.mutate]),
   );
   const [open, setOpen] = useState(false);
+
+  const [toolChoiceChangeInfo, setToolChoiceChangeInfo] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -53,6 +60,10 @@ export const ToolModeDropdown = ({ disabled }: { disabled?: boolean }) => {
                   : "auto",
           };
         });
+        setToolChoiceChangeInfo(true);
+        debounce(() => {
+          setToolChoiceChangeInfo(false);
+        }, 1000);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -62,7 +73,17 @@ export const ToolModeDropdown = ({ disabled }: { disabled?: boolean }) => {
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild disabled={disabled}>
-        <div>
+        <div className="relative">
+          <Tooltip open={toolChoiceChangeInfo}>
+            <TooltipTrigger asChild>
+              <span className="absolute inset-0 -z-10" />
+            </TooltipTrigger>
+            <TooltipContent className="flex items-center gap-2" side="bottom">
+              {capitalizeFirstLetter(toolChoice)}
+              <CheckIcon className="size-2.5" />
+            </TooltipContent>
+          </Tooltip>
+
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -71,11 +92,18 @@ export const ToolModeDropdown = ({ disabled }: { disabled?: boolean }) => {
                 className="rounded-full p-2! data-[state=open]:bg-input! hover:bg-input!"
                 onClick={() => setOpen(true)}
               >
-                {/* <span>{capitalizeFirstLetter(toolChoice)}</span> */}
                 <Settings2 />
               </Button>
             </TooltipTrigger>
-            <TooltipContent> {t("selectToolMode")}</TooltipContent>
+            <TooltipContent className="flex items-center gap-2" side="bottom">
+              {t("selectToolMode")}
+              <Badge className="text-xs" variant={"secondary"}>
+                {capitalizeFirstLetter(toolChoice)}
+                <span className="text-muted-foreground ml-2">
+                  {getShortcutKeyList(Shortcuts.toolMode).join("")}
+                </span>
+              </Badge>
+            </TooltipContent>
           </Tooltip>
         </div>
       </DropdownMenuTrigger>
