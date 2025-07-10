@@ -40,9 +40,9 @@ import {
   convertToMessage,
   extractInProgressToolPart,
   assignToolResult,
-  workflowToVercelAITools,
   filterMCPToolsByAllowedMCPServers,
   filterMcpServerCustomizations,
+  workflowToVercelAITools,
 } from "./shared.chat";
 import {
   generateTitleFromUserMessageAction,
@@ -50,10 +50,7 @@ import {
 } from "./actions";
 import { getSession } from "auth/server";
 import { colorize } from "consola/utils";
-import {
-  isVercelAIWorkflowTool,
-  VercelAIWorkflowTool,
-} from "app-types/workflow";
+import { isVercelAIWorkflowTool } from "app-types/workflow";
 import { objectFlow } from "lib/utils";
 import { APP_DEFAULT_TOOL_KIT } from "lib/ai/tools/tool-kit";
 
@@ -118,16 +115,18 @@ export async function POST(request: Request) {
       .flatMap((annotation) => annotation.mentions)
       .filter(Boolean) as ChatMention[];
 
-    const isToolCallAllowed =
-      (!isToolCallUnsupportedModel(model) && toolChoice != "none") ||
-      mentions.length > 0;
-
     const messages: Message[] = isLastMessageUserMessage
       ? appendClientMessage({
           messages: previousMessages,
           message,
         })
       : previousMessages;
+
+    const inProgressToolStep = extractInProgressToolPart(messages.slice(-2));
+
+    const isToolCallAllowed =
+      (!isToolCallUnsupportedModel(model) && toolChoice != "none") ||
+      mentions.length > 0;
 
     return createDataStreamResponse({
       execute: async (dataStream) => {
@@ -143,30 +142,16 @@ export async function POST(request: Request) {
           })
           .orElse({});
 
-        const WORKFLOW_TOOLS = await safe(() =>
-          workflowRepository.selectToolByIds(
-            mentions
-              .filter((m) => m.type == "workflow")
-              .map((v) => v.workflowId),
-          ),
-        )
-          .map((v) =>
-            v.map((workflow) =>
-              workflowToVercelAITools({
-                ...workflow,
-                dataStream,
-              }),
+        const WORKFLOW_TOOLS = await safe()
+          .map(errorIf(() => !isToolCallAllowed && "Not allowed"))
+          .map(() =>
+            workflowRepository.selectToolByIds(
+              mentions
+                .filter((m) => m.type == "workflow")
+                .map((v) => v.workflowId),
             ),
           )
-          .map((workflowTools) =>
-            workflowTools.reduce(
-              (prev, cur) => {
-                prev[cur._toolName] = cur;
-                return prev;
-              },
-              {} as Record<string, VercelAIWorkflowTool>,
-            ),
-          )
+          .map((v) => workflowToVercelAITools(v, dataStream))
           .orElse({});
 
         const APP_DEFAULT_TOOLS = safe(APP_DEFAULT_TOOL_KIT)
@@ -194,15 +179,12 @@ export async function POST(request: Request) {
           })
           .orElse({});
 
-        const inProgressToolStep = extractInProgressToolPart(
-          messages.slice(-2),
-        );
-
         if (inProgressToolStep) {
+          console.log(`progressTool...`);
           const toolResult = await manualToolExecuteByLastMessage(
             inProgressToolStep,
             message,
-            { ...MCP_TOOLS, ...WORKFLOW_TOOLS },
+            { ...MCP_TOOLS, ...WORKFLOW_TOOLS, ...APP_DEFAULT_TOOLS },
             request.signal,
           );
           assignToolResult(inProgressToolStep, toolResult);

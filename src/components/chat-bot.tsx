@@ -187,7 +187,7 @@ export default function ChatBot({ threadId, initialMessages, slots }: Props) {
         .watch(() => setIsExecutingProxyToolCall(false))
         .unwrap();
     },
-    [isPendingToolCall, addToolResult],
+    [addToolResult],
   );
 
   useEffect(() => {

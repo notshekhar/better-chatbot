@@ -47,6 +47,9 @@ const PurePreviewMessage = ({
   isError,
 }: Props) => {
   const isUserMessage = useMemo(() => message.role === "user", [message.role]);
+  if (message.role == "system") {
+    return null; // system message is not shown
+  }
   return (
     <div className="w-full mx-auto max-w-3xl px-6 group/message">
       <div
@@ -131,7 +134,7 @@ const PurePreviewMessage = ({
                   showActions={
                     isLastMessage ? isLastPart && !isLoading : isLastPart
                   }
-                  onPoxyToolCall={isLast ? onPoxyToolCall : undefined}
+                  onPoxyToolCall={onPoxyToolCall}
                   key={key}
                   part={part}
                   isError={isError}

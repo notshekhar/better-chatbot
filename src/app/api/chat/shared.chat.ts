@@ -119,7 +119,10 @@ export function mergeSystemPrompt(...prompts: (string | undefined)[]): string {
 export function manualToolExecuteByLastMessage(
   part: ToolInvocationUIPart,
   message: Message,
-  tools: Record<string, VercelAIMcpTool | VercelAIWorkflowTool>,
+  tools: Record<
+    string,
+    VercelAIMcpTool | VercelAIWorkflowTool | (Tool & { __$ref__?: string })
+  >,
   abortSignal?: AbortSignal,
 ) {
   const { args, toolName } = part.toolInvocation;
@@ -132,15 +135,15 @@ export function manualToolExecuteByLastMessage(
 
   const tool = tools[toolName];
 
+  if (!manulConfirmation?.result) return MANUAL_REJECT_RESPONSE_PROMPT;
   return safe(() => {
     if (!tool) throw new Error(`tool not found: ${toolName}`);
-
     return ClientToolInvocationZodSchema.parse(manulConfirmation?.result);
   })
     .map((result) => {
       const value = result?.result;
       if (result.action == "direct") {
-        console.log(value);
+        console.log({ value });
         return value;
       } else if (result.action == "manual") {
         if (!value) return MANUAL_REJECT_RESPONSE_PROMPT;
@@ -151,7 +154,13 @@ export function manualToolExecuteByLastMessage(
             messages: [],
           });
         }
-        return callMcpToolAction(tool._mcpServerId, tool._originToolName, args);
+
+        const mcpTool = tool as VercelAIMcpTool;
+        return callMcpToolAction(
+          mcpTool._mcpServerId,
+          mcpTool._originToolName,
+          args,
+        );
       }
       throw new Error("Invalid Client Tool Invocation Action " + result.action);
     })
@@ -252,7 +261,7 @@ export function filterMcpServerCustomizations(
   );
 }
 
-export const workflowToVercelAITools = ({
+export const workflowToVercelAITool = ({
   id,
   description,
   schema,
@@ -400,4 +409,29 @@ export const workflowToVercelAITools = ({
   tool.__$ref__ = "workflow";
 
   return tool;
+};
+
+export const workflowToVercelAITools = (
+  workflows: {
+    id: string;
+    name: string;
+    description?: string;
+    schema: ObjectJsonSchema7;
+  }[],
+  dataStream: DataStreamWriter,
+) => {
+  return workflows
+    .map((v) =>
+      workflowToVercelAITool({
+        ...v,
+        dataStream,
+      }),
+    )
+    .reduce(
+      (prev, cur) => {
+        prev[cur._toolName] = cur;
+        return prev;
+      },
+      {} as Record<string, VercelAIWorkflowTool>,
+    );
 };
