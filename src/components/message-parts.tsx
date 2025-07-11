@@ -17,11 +17,14 @@ import {
   Loader2,
   AlertTriangleIcon,
   Terminal,
+  InfoIcon,
+  BugIcon,
+  CodeXmlIcon,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "ui/tooltip";
 import { Button } from "ui/button";
 import { Markdown } from "./markdown";
-import { cn, safeJSONParse } from "lib/utils";
+import { cn, isObject, safeJSONParse } from "lib/utils";
 import JsonView from "ui/json-view";
 import {
   useMemo,
@@ -460,7 +463,6 @@ export const ToolMessagePart = memo(
       }
 
       if (toolName === DefaultToolName.JavascriptExecution) {
-        console.log(`has proxy tool call ${!!onPoxyToolCall},${state}`);
         return (
           <SimpleJavascriptExecutionToolPart
             part={toolInvocation}
@@ -1109,7 +1111,22 @@ export function SimpleJavascriptExecutionToolPart({
 
   const runCode = useCallback(
     async (code: string, input: any, timeout?: number) => {
-      const result = await safeJsRun(code, input, timeout);
+      const woker = new Worker(new URL("./safe-js-worker.ts", import.meta.url));
+
+      const job = new Promise((resolve) => {
+        woker.addEventListener("message", (e) => {
+          if (e.data.id != part.toolCallId) return;
+          resolve(e.data);
+        });
+        woker.postMessage({
+          type: "execute",
+          id: part.toolCallId,
+          payload: { code, input, timeout },
+        });
+      });
+
+      const result = await job;
+      woker.terminate();
       onResult?.(result);
     },
     [onResult],
@@ -1136,17 +1153,22 @@ export function SimpleJavascriptExecutionToolPart({
 
   return (
     <div className="flex flex-col">
-      <p>{part.state}</p>
-      <JsonView data={part} />
-      <div className="flex items-center gap-1 mt-4 px-2">
-        <Loader className="size-3.5 animate-spin text-muted-foreground" />
-        <TextShimmer className="">Generating Code...</TextShimmer>
-      </div>
       <div className="px-6 py-3">
         {!!part.args?.code && (
           <div className="border relative rounded-lg overflow-hidden bg-background shadow fade-in animate-in duration-500">
-            <div className="py-2.5 px-4 flex items-center gap-1.5 z-20 border-b bg-background">
-              <Terminal className="size-3 text-muted-foreground " />
+            <div className="py-2.5 px-4 flex items-center gap-1.5 z-20 border-b bg-background min-h-[37px]">
+              {part.state != "result" ? (
+                <>
+                  <Loader className="size-3 animate-spin text-muted-foreground" />
+                  <TextShimmer className="text-xs">
+                    Generating Code...
+                  </TextShimmer>
+                </>
+              ) : (
+                <span className="text-muted-foreground text-xs">
+                  javascript
+                </span>
+              )}
               <div className="flex-1" />
               <div className="w-1.5 h-1.5 rounded-full bg-input" />
               <div className="w-1.5 h-1.5 rounded-full bg-input" />
@@ -1154,29 +1176,29 @@ export function SimpleJavascriptExecutionToolPart({
             </div>
             <div className="relative">
               <div
-                className={`z-10 absolute inset-0 w-full h-1/4 bg-gradient-to-b to-90%  to-transparent ${part.state != "result" ? "from-background pointer-events-none" : "from-transparent"}`}
+                className={`z-10 absolute inset-0 w-full h-1/4 bg-gradient-to-b to-90%  to-transparent ${part.state != "result" ? "from-background" : "from-transparent pointer-events-none"}`}
               />
               <div
-                className={`z-10 absolute inset-0 w-1/4 h-full bg-gradient-to-r  to-transparent ${part.state != "result" ? "from-background pointer-events-none" : "from-transparent"}`}
+                className={`z-10 absolute inset-0 w-1/4 h-full bg-gradient-to-r  to-transparent ${part.state != "result" ? "from-background" : "from-transparent pointer-events-none"}`}
               />
               <div
-                className={`z-10 absolute left-0 bottom-0 w-full h-1/4 bg-gradient-to-t  to-transparent ${part.state != "result" ? "from-background pointer-events-none" : "from-transparent"}`}
+                className={`z-10 absolute left-0 bottom-0 w-full h-1/4 bg-gradient-to-t  to-transparent ${part.state != "result" ? "from-background" : "from-transparent pointer-events-none"}`}
               />
               <div
-                className={`z-10 absolute right-0 bottom-0 w-1/4 h-full bg-gradient-to-l  to-transparent ${part.state != "result" ? "from-background pointer-events-none" : "from-transparent"}`}
+                className={`z-10 absolute right-0 bottom-0 w-1/4 h-full bg-gradient-to-l  to-transparent ${part.state != "result" ? "from-background" : "from-transparent pointer-events-none"}`}
               />
               <div
-                ref={blockRef}
                 className={`min-h-14 p-6 text-xs overflow-y-auto transition-height duration-1000 ${part.state != "result" ? "max-h-32" : "max-h-60"}`}
               >
-                <CodeBlock
-                  className="bg-background p-2"
-                  code={part.args?.code}
-                  lang="javascript"
-                  fallback={<CodeFallback />}
-                />
+                <div ref={blockRef}>
+                  <CodeBlock
+                    className="bg-background p-2"
+                    code={part.args?.code}
+                    lang="javascript"
+                    fallback={<CodeFallback />}
+                  />
+                </div>
               </div>
-              <div className="border-t py-2.5 px-4">{/* logs */}</div>
             </div>
           </div>
         )}

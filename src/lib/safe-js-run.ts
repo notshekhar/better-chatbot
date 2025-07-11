@@ -2,17 +2,21 @@
 
 import { safe } from "ts-safe";
 
+type LogEntry = {
+  type: "log" | "info" | "warn" | "error" | "debug" | "trace";
+  args: any[];
+};
+
 type SafeRunOptions = {
   code: string;
   input?: Record<string, any>;
   timeout?: number;
-  onLog?: (...args: any[]) => void;
+  onLog?: (entry: LogEntry) => void;
 };
 
 type ExecutionResult = {
   success: boolean;
-  result?: any;
-  logs: any[][];
+  logs: LogEntry[];
   error?: string;
   executionTime: number;
 };
@@ -125,18 +129,15 @@ function validateCodeSafety(code: string): string | null {
 // Create a controlled execution environment with safe APIs
 function createSafeEnvironment(
   input: Record<string, any>,
-  logCapture: (...args: any[]) => void,
+  logCapture: (type: LogEntry["type"], ...args: any[]) => void,
 ) {
-  // Result storage for setResult function
-  let __executionResult: any = undefined;
-
   const safeConsole = {
-    log: logCapture,
-    info: logCapture,
-    warn: logCapture,
-    error: logCapture,
-    debug: logCapture,
-    trace: logCapture,
+    log: (...args: any[]) => logCapture("log", ...args),
+    info: (...args: any[]) => logCapture("info", ...args),
+    warn: (...args: any[]) => logCapture("warn", ...args),
+    error: (...args: any[]) => logCapture("error", ...args),
+    debug: (...args: any[]) => logCapture("debug", ...args),
+    trace: (...args: any[]) => logCapture("trace", ...args),
   };
 
   // Safe global objects and functions
@@ -146,11 +147,6 @@ function createSafeEnvironment(
 
     // Console for output
     console: safeConsole,
-
-    // Result setting function
-    setResult: (value: any) => {
-      __executionResult = value;
-    },
 
     // Standard JavaScript objects
     Math: Math,
@@ -184,7 +180,7 @@ function createSafeEnvironment(
     }),
   };
 
-  return { safeGlobals, getResult: () => __executionResult };
+  return { safeGlobals };
 }
 
 // Simple code wrapper - no complex result detection needed
@@ -199,12 +195,13 @@ async function execute({
   onLog,
 }: SafeRunOptions): Promise<ExecutionResult> {
   const startTime = Date.now();
-  const logs: any[][] = [];
+  const logs: LogEntry[] = [];
 
   // Capture logs
-  const logCapture = (...args: any[]) => {
-    logs.push(args);
-    if (onLog) onLog(...args);
+  const logCapture = (type: LogEntry["type"], ...args: any[]) => {
+    const entry: LogEntry = { type, args };
+    logs.push(entry);
+    if (onLog) onLog(entry);
   };
 
   // Validate code safety
@@ -219,7 +216,7 @@ async function execute({
   }
 
   // Create safe execution environment
-  const { safeGlobals, getResult } = createSafeEnvironment(input, logCapture);
+  const { safeGlobals } = createSafeEnvironment(input, logCapture);
   const wrappedCode = wrapCode(code);
 
   // Execute with timeout protection
@@ -246,7 +243,6 @@ async function execute({
 
     return {
       success: true,
-      result: getResult(),
       logs,
       executionTime: Date.now() - startTime,
     };
@@ -264,13 +260,14 @@ export async function safeJsRun(
   code: string,
   input: Record<string, unknown>,
   timeout: number = 5000,
+  onLog?: (entry: LogEntry) => void,
 ) {
   return safe(async () => {
     const result = await execute({
       code,
       input,
       timeout,
-      onLog: (...args) => console.log(...args),
+      onLog,
     });
 
     if (!result.success) {
@@ -278,7 +275,6 @@ export async function safeJsRun(
     }
 
     return {
-      result: result.result,
       logs: result.logs,
       executionTime: `${result.executionTime}ms`,
       success: true,
@@ -295,12 +291,13 @@ export async function safeJsRun(
     • API errors: Check network connectivity for fetch() calls
     • Type errors: Verify data types and object properties exist
     • Reference errors: Make sure all variables and functions are defined
-    • Missing result: Use setResult(value) to return a result from your code
     
-    Available APIs: Math, JSON, Date, fetch, setTimeout, console.log, setResult
+    Available APIs: Math, JSON, Date, fetch, setTimeout, console.log
     Input data properties are available as variables in your code scope.
-    Use setResult(value) to return results instead of relying on last expression.`,
+    Use console.log() to output results and debug information.`,
       };
     })
     .unwrap();
 }
+
+export type { LogEntry };

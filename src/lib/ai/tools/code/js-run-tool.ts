@@ -8,7 +8,7 @@ export const jsExecutionSchema: JSONSchema7 = {
     code: {
       type: "string",
       description:
-        "JavaScript code to execute. Use setResult(value) to return a result. Can include calculations, data processing, API calls, and logic operations. Avoid DOM manipulation, file system access, or server-side operations.",
+        "JavaScript code to execute. Use console.log() to output results and console.error() for errors. Can include calculations, data processing, API calls, and logic operations. Avoid DOM manipulation, file system access, or server-side operations.",
     },
     input: {
       type: "object",
@@ -31,21 +31,24 @@ export const jsExecutionSchema: JSONSchema7 = {
 };
 
 export const jsExecutionTool = createTool({
-  description: `Execute JavaScript code safely in a sandboxed environment. Perfect for:
-SECURITY: Runs in a restricted sandbox - no DOM access, no file system, no server-side operations.
-AVAILABLE APIS: Math, JSON, Date, Array, Object, String, Number, fetch, setTimeout, console.log, setResult
+  description: `Execute JavaScript code safely in a sandboxed environment for generating accurate data and calculations.
 
-RESULT OUTPUT: Use setResult(value) to return a result from your code.
-- eg. setResult({name: "test"})
+PURPOSE: Use this tool to generate precise, calculated data through JavaScript computation.
 
-INPUT DATA: All input properties become variables in your code scope
-- Input: {numbers: [1,2,3], multiplier: 2}
-- Code: "setResult(numbers.map(n => n * multiplier))"
+SECURITY: Runs in restricted sandbox - no DOM, file system, or server access.
+AVAILABLE APIS: Math, JSON, Date, Array, Object, String, Number, fetch, setTimeout, console methods
 
-Example usage: 
+OUTPUT: Use console methods to output results:
+- console.log(result) - Main results
+- console.error(error) - Errors  
+- console.info(info) - Information
+
+INPUT: All input properties become variables in your code.
+
+Example: 
 {
   input: {numbers: [1,2,3]},
-  code: "const sum = numbers.reduce((acc, curr) => acc + curr, 0);\nconsole.log(sum);\nsetResult(sum);"
+  code: "const sum = numbers.reduce((a, b) => a + b, 0); console.log('Total:', sum);"
 }`,
   parameters: jsonSchemaToZod(jsExecutionSchema),
 });
