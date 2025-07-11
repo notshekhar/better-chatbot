@@ -21,7 +21,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "ui/tooltip";
 import { Button } from "ui/button";
 import { Markdown } from "./markdown";
-import { cn, isObject, safeJSONParse, toAny } from "lib/utils";
+import { cn, isObject, safeJSONParse, toAny, wait } from "lib/utils";
 import JsonView from "ui/json-view";
 import {
   useMemo,
@@ -726,6 +726,8 @@ export const ToolMessagePart = memo(
     if (prev.isLast !== next.isLast) return false;
     if (prev.showActions !== next.showActions) return false;
     if (!!prev.onPoxyToolCall !== !!next.onPoxyToolCall) return false;
+    if (prev.isManualToolInvocation !== next.isManualToolInvocation)
+      return false;
     if (prev.messageId !== next.messageId) return false;
     if (!equal(prev.part.toolInvocation, next.part.toolInvocation))
       return false;
@@ -1095,177 +1097,180 @@ export function WorkflowToolDetail({
   );
 }
 
-export function SimpleJavascriptExecutionToolPart({
-  part,
-  onResult,
-}: {
-  part: ToolMessagePart["toolInvocation"];
-  onResult?: (result?: any) => void;
-}) {
-  const isRun = useRef(false);
+export const SimpleJavascriptExecutionToolPart = memo(
+  function SimpleJavascriptExecutionToolPart({
+    part,
+    onResult,
+  }: {
+    part: ToolMessagePart["toolInvocation"];
+    onResult?: (result?: any) => void;
+  }) {
+    const isRun = useRef(false);
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const runCode = useCallback(
-    async (code: string, input: any, timeout?: number) => {
-      const result = await safeJsRun(code, input, timeout);
-      onResult?.({
-        ...toAny(result),
-        guide:
-          "The code has already been executed and displayed to the user. Please provide only the output results from console.log() or error details if any occurred. Do not repeat the code itself.",
+    const runCode = useCallback(
+      async (code: string, input: any, timeout?: number) => {
+        await wait(2000);
+        const result = await safeJsRun(code, input, timeout);
+        onResult?.({
+          ...toAny(result),
+          guide:
+            "The code has already been executed and displayed to the user. Please provide only the output results from console.log() or error details if any occurred. Do not repeat the code itself.",
+        });
+      },
+      [onResult],
+    );
+
+    const scrollToCode = useCallback(() => {
+      scrollContainerRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "nearest",
       });
-    },
-    [onResult],
-  );
+    }, []);
 
-  const scrollToCode = useCallback(() => {
-    scrollContainerRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-      inline: "nearest",
-    });
-  }, []);
+    useEffect(() => {
+      if (onResult && part.args && part.state == "call" && !isRun.current) {
+        isRun.current = true;
+        runCode(part.args.code, part.args.input, part.args.timeout);
+      }
+    }, [part.state, !!onResult]);
 
-  useEffect(() => {
-    if (onResult && part.args && part.state == "call" && !isRun.current) {
-      isRun.current = true;
-      runCode(part.args.code, part.args.input, part.args.timeout);
-    }
-  }, [part.state, !!onResult]);
+    useEffect(() => {
+      if (part.state != "result") {
+        const closeKey = setInterval(scrollToCode, 300);
+        return () => clearInterval(closeKey);
+      } else {
+        scrollToCode();
+      }
+    }, [part.state]);
 
-  useEffect(() => {
-    if (part.state != "result") {
-      const closeKey = setTimeout(scrollToCode, 300);
-      return () => clearTimeout(closeKey);
-    } else {
-      scrollToCode();
-    }
-  }, [part.state]);
+    const result = useMemo(() => {
+      if (part.state != "result") return null;
+      return part.result as SafeJsExecutionResult;
+    }, [part]);
 
-  const result = useMemo(() => {
-    if (part.state != "result") return null;
-    return part.result as SafeJsExecutionResult;
-  }, [part]);
+    const logs = useMemo(() => {
+      const error = result?.error;
+      const logs = result?.logs || [];
 
-  const logs = useMemo(() => {
-    const error = result?.error;
-    const logs = result?.logs || [];
+      if (error) {
+        return [{ type: "error", args: [error] }, ...logs];
+      }
 
-    if (error) {
-      return [{ type: "error", args: [error] }, ...logs];
-    }
+      return logs;
+    }, [part]);
 
-    return logs;
-  }, [part]);
+    return (
+      <div className="flex flex-col">
+        <div className="px-6 py-3">
+          {!!part.args?.code && (
+            <div className="border relative rounded-lg overflow-hidden bg-background shadow fade-in animate-in duration-500">
+              <div className="py-2.5 px-4 flex items-center gap-1.5 z-20 border-b bg-background min-h-[37px]">
+                {part.state != "result" ? (
+                  <>
+                    <Loader className="size-3 animate-spin text-muted-foreground" />
+                    <TextShimmer className="text-xs">
+                      Generating Code...
+                    </TextShimmer>
+                  </>
+                ) : (
+                  <>
+                    {result?.error ? (
+                      <>
+                        <AlertTriangleIcon className="size-3 text-destructive" />
+                        <span className="text-destructive text-xs">ERROR</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-[7px] bg-border rounded-xs w-4 h-4 p-0.5 flex items-end justify-end font-bold">
+                          JS
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+                <div className="flex-1" />
+                <div className="w-1.5 h-1.5 rounded-full bg-input" />
+                <div className="w-1.5 h-1.5 rounded-full bg-input" />
+                <div className="w-1.5 h-1.5 rounded-full bg-input" />
+              </div>
+              <div className="relative">
+                <div
+                  className={`z-10 absolute inset-0 w-full h-1/4 bg-gradient-to-b to-90%  from-background to-transparent ${part.state != "result" ? "" : "h-1/8 pointer-events-none"}`}
+                />
+                <div
+                  className={`z-10 absolute inset-0 w-1/4 h-full bg-gradient-to-r from-background to-transparent ${part.state != "result" ? "" : "w-1/8 pointer-events-none"}`}
+                />
+                <div
+                  className={`z-10 absolute left-0 bottom-0 w-full h-1/4 bg-gradient-to-t from-background to-transparent ${part.state != "result" ? "" : "h-1/8 pointer-events-none"}`}
+                />
+                <div
+                  className={`z-10 absolute right-0 bottom-0 w-1/4 h-full bg-gradient-to-l from-background to-transparent ${part.state != "result" ? "" : "w-1/8 pointer-events-none"}`}
+                />
 
-  return (
-    <div className="flex flex-col">
-      <div className="px-6 py-3">
-        {!!part.args?.code && (
-          <div className="border relative rounded-lg overflow-hidden bg-background shadow fade-in animate-in duration-500">
-            <div className="py-2.5 px-4 flex items-center gap-1.5 z-20 border-b bg-background min-h-[37px]">
-              {part.state != "result" ? (
-                <>
-                  <Loader className="size-3 animate-spin text-muted-foreground" />
-                  <TextShimmer className="text-xs">
-                    Generating Code...
-                  </TextShimmer>
-                </>
-              ) : (
-                <>
-                  {result?.error ? (
-                    <>
-                      <AlertTriangleIcon className="size-3 text-destructive" />
-                      <span className="text-destructive text-xs">ERROR</span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="text-[7px] bg-border rounded-xs w-4 h-4 p-0.5 flex items-end justify-end font-bold">
-                        JS
-                      </div>
-                    </>
-                  )}
-                </>
-              )}
-              <div className="flex-1" />
-              <div className="w-1.5 h-1.5 rounded-full bg-input" />
-              <div className="w-1.5 h-1.5 rounded-full bg-input" />
-              <div className="w-1.5 h-1.5 rounded-full bg-input" />
-            </div>
-            <div className="relative">
-              <div
-                className={`z-10 absolute inset-0 w-full h-1/4 bg-gradient-to-b to-90%  from-background to-transparent ${part.state != "result" ? "" : "h-1/8 pointer-events-none"}`}
-              />
-              <div
-                className={`z-10 absolute inset-0 w-1/4 h-full bg-gradient-to-r from-background to-transparent ${part.state != "result" ? "" : "w-1/8 pointer-events-none"}`}
-              />
-              <div
-                className={`z-10 absolute left-0 bottom-0 w-full h-1/4 bg-gradient-to-t from-background to-transparent ${part.state != "result" ? "" : "h-1/8 pointer-events-none"}`}
-              />
-              <div
-                className={`z-10 absolute right-0 bottom-0 w-1/4 h-full bg-gradient-to-l from-background to-transparent ${part.state != "result" ? "" : "w-1/8 pointer-events-none"}`}
-              />
-
-              <div
-                className={`min-h-14 p-6 text-xs overflow-y-auto transition-height duration-1000 max-h-60`}
-              >
-                <div>
-                  <CodeBlock
-                    className="bg-background p-4 text-[10px]"
-                    code={part.args?.code}
-                    lang="javascript"
-                    fallback={<CodeFallback />}
-                  />
-                  <div ref={scrollContainerRef} />
+                <div
+                  className={`min-h-14 p-6 text-xs overflow-y-auto transition-height duration-1000 max-h-60`}
+                >
+                  <div>
+                    <CodeBlock
+                      className="bg-background p-4 text-[10px]"
+                      code={part.args?.code}
+                      lang="javascript"
+                      fallback={<CodeFallback />}
+                    />
+                    <div ref={scrollContainerRef} />
+                  </div>
                 </div>
               </div>
-            </div>
-            {logs.length > 0 && (
-              <div className="p-4 text-[10px] text-foreground flex flex-col gap-1">
-                <div className="text-foreground flex items-center gap-1">
-                  <div className="w-1 h-1 mr-1 ring ring-border rounded-full" />{" "}
-                  better-chatbot
-                  <Percent className="size-2" />
-                </div>
-                {logs.map((log, i) => {
-                  return (
-                    <div
-                      key={i}
-                      className={cn(
-                        "flex gap-1 text-muted-foreground pl-3",
-                        log.type == "error" && "text-destructive",
-                        log.type == "warn" && "text-yellow-500",
-                      )}
-                    >
-                      <div className="h-[15px] flex items-center pr-2">
-                        {log.type == "error" ? (
-                          <AlertTriangleIcon className="size-2" />
-                        ) : log.type == "warn" ? (
-                          <AlertTriangleIcon className="size-2" />
-                        ) : (
-                          <ChevronRight className="size-2" />
+              {logs.length > 0 && (
+                <div className="p-4 text-[10px] text-foreground flex flex-col gap-1">
+                  <div className="text-foreground flex items-center gap-1">
+                    <div className="w-1 h-1 mr-1 ring ring-border rounded-full" />{" "}
+                    better-chatbot
+                    <Percent className="size-2" />
+                  </div>
+                  {logs.map((log, i) => {
+                    return (
+                      <div
+                        key={i}
+                        className={cn(
+                          "flex gap-1 text-muted-foreground pl-3",
+                          log.type == "error" && "text-destructive",
+                          log.type == "warn" && "text-yellow-500",
                         )}
+                      >
+                        <div className="h-[15px] flex items-center pr-2">
+                          {log.type == "error" ? (
+                            <AlertTriangleIcon className="size-2" />
+                          ) : log.type == "warn" ? (
+                            <AlertTriangleIcon className="size-2" />
+                          ) : (
+                            <ChevronRight className="size-2" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          {log.args
+                            .map((arg) =>
+                              isObject(arg)
+                                ? JSON.stringify(arg)
+                                : arg.toString(),
+                            )
+                            .join(" ")}
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        {log.args
-                          .map((arg) =>
-                            isObject(arg)
-                              ? JSON.stringify(arg)
-                              : arg.toString(),
-                          )
-                          .join(" ")}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  },
+);
 
 function CodeFallback() {
   return (

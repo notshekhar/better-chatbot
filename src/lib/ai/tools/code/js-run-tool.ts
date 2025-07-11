@@ -8,7 +8,7 @@ export const jsExecutionSchema: JSONSchema7 = {
     code: {
       type: "string",
       description:
-        "JavaScript code to execute. Use console.log() to output results and console.error() for errors. Can include calculations, data processing, API calls, and logic operations. Avoid DOM manipulation, file system access, or server-side operations.",
+        "JavaScript code to execute. Use console.log() to output results and console.error() for errors. Can include calculations, data processing, API calls, and logic operations. Avoid DOM manipulation, file system access, or server-side operations. IMPORTANT: Use proper line breaks (\\n) between statements for better code readability and formatting.",
     },
     input: {
       type: "object",
@@ -42,12 +42,14 @@ IMPORTANT: This is NOT for building apps, UI components, or websites. Use only f
 LIMITATIONS: Browser Web Worker environment - no import/require, no DOM, no React/frameworks.
 Use console.log(),console.error() to output results.
 
+CODE FORMATTING: Always use proper line breaks (\\n) between statements for better readability. Format your code clearly with appropriate spacing.
+
 USAGE: When using this tool, you don't need to show the full code to the user beforehand. Just use the tool directly - the code will be visible in the tool execution.
 
 Example: Calculate sum of numbers
 {
   input: {numbers: [1,2,3]},
-  code: "const sum = numbers.reduce((a, b) => a + b, 0); console.log('Total:', sum);"
+  code: "const sum = numbers.reduce((a, b) => a + b, 0);\nconsole.log('Total:', sum);"
 }`,
   parameters: jsonSchemaToZod(jsExecutionSchema),
 });

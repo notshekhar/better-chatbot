@@ -209,16 +209,13 @@ export async function POST(request: Request) {
           mentions.length ? mentionPrompt : undefined,
         );
 
-        const vercelAITooles = safe(MCP_TOOLS)
+        const vercelAITooles = safe({ ...MCP_TOOLS, ...WORKFLOW_TOOLS })
           .map((t) => {
             const bindingTools =
-              toolChoice === "manual" && mentions.length == 0
-                ? excludeToolExecution(t)
-                : t;
+              toolChoice === "manual" ? excludeToolExecution(t) : t;
             return {
               ...bindingTools,
-              ...APP_DEFAULT_TOOLS,
-              ...WORKFLOW_TOOLS, // Workflow Tool Not Supported Manual
+              ...APP_DEFAULT_TOOLS, // APP_DEFAULT_TOOLS Not Supported Manual
             };
           })
           .unwrap();

@@ -25,10 +25,9 @@ export type SafeJsExecutionResult = {
 // Security: Block dangerous keywords that could compromise sandbox
 const FORBIDDEN_KEYWORDS = [
   // DOM and browser globals
-  "self",
-  "document",
-  "globalThis",
-  "self",
+  "document.",
+  "globalThis.",
+  "self.",
   "window",
   "frames",
   "opener",
@@ -38,7 +37,7 @@ const FORBIDDEN_KEYWORDS = [
   "prototype",
   "__proto__",
   // Node.js environment
-  "process",
+  "process.",
   "require",
   "exports",
   // Dangerous objects
@@ -65,19 +64,19 @@ function validateCodeSafety(code: string): string | null {
   // Detect obvious infinite loop patterns that would block the event loop
   const infiniteLoopPatterns = [
     {
-      pattern: /while\s*\(\s*true\s*\)/gi,
+      pattern: /while\s*\(\s*true\s*\)/,
       message: "Infinite while loop detected",
     },
     {
-      pattern: /for\s*\(\s*;\s*;\s*\)/gi,
+      pattern: /for\s*\(\s*;\s*;\s*\)/,
       message: "Infinite for loop detected",
     },
     {
-      pattern: /while\s*\(\s*1\s*\)/gi,
+      pattern: /while\s*\(\s*1\s*\)/,
       message: "Infinite while loop detected",
     },
     {
-      pattern: /for\s*\(\s*;\s*true\s*;\s*\)/gi,
+      pattern: /for\s*\(\s*;\s*true\s*;\s*\)/,
       message: "Infinite for loop detected",
     },
   ];
@@ -98,12 +97,12 @@ function validateCodeSafety(code: string): string | null {
       pattern: /\[['"`][a-zA-Z_$][a-zA-Z0-9_$]*['"`]\]/g,
       message: "Dynamic property access",
     },
-    { pattern: /eval\s*\(/gi, message: "Dynamic code evaluation" },
-    { pattern: /(new\s+)?Function\s*\(/gi, message: "Function constructor" },
-    { pattern: /constructor\s*\(/gi, message: "Constructor access" },
-    { pattern: /prototype\s*\[/gi, message: "Prototype manipulation" },
+    { pattern: /eval\s*\(/, message: "Dynamic code evaluation" },
+    { pattern: /(new\s+)?Function\s*\(/, message: "Function constructor" },
+    { pattern: /constructor\s*\(/, message: "Constructor access" },
+    { pattern: /prototype\s*\[/, message: "Prototype manipulation" },
     {
-      pattern: /(__proto__|\.constructor)/gi,
+      pattern: /(__proto__|\.constructor)/,
       message: "Prototype chain access",
     },
   ];
@@ -192,6 +191,10 @@ async function execute({
   const logCapture = (type: LogEntry["type"], ...args: any[]) => {
     const entry: LogEntry = { type, args };
     logs.push(entry);
+    const length = JSON.stringify(logs).length;
+    if (length > 10000) {
+      throw new Error(`Logs limit exceeded ${length} characters`);
+    }
     if (onLog) onLog(entry);
   };
 

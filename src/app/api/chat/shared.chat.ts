@@ -142,6 +142,7 @@ export function manualToolExecuteByLastMessage(
   })
     .map((result) => {
       const value = result?.result;
+
       if (result.action == "direct") {
         return value;
       } else if (result.action == "manual") {
@@ -152,14 +153,19 @@ export function manualToolExecuteByLastMessage(
             abortSignal: abortSignal ?? new AbortController().signal,
             messages: [],
           });
+        } else if (tool.__$ref__ === "mcp") {
+          const mcpTool = tool as VercelAIMcpTool;
+          return callMcpToolAction(
+            mcpTool._mcpServerId,
+            mcpTool._originToolName,
+            args,
+          );
         }
-
-        const mcpTool = tool as VercelAIMcpTool;
-        return callMcpToolAction(
-          mcpTool._mcpServerId,
-          mcpTool._originToolName,
-          args,
-        );
+        return tool.execute!(args, {
+          toolCallId: part.toolInvocation.toolCallId,
+          abortSignal: abortSignal ?? new AbortController().signal,
+          messages: [],
+        });
       }
       throw new Error("Invalid Client Tool Invocation Action " + result.action);
     })

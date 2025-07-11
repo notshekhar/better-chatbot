@@ -260,9 +260,9 @@ export default function ChatBot({ threadId, initialMessages, slots }: Props) {
                   message={message}
                   status={status}
                   onPoxyToolCall={
-                    isLastMessage &&
                     isPendingToolCall &&
-                    !isExecutingProxyToolCall
+                    !isExecutingProxyToolCall &&
+                    isLastMessage
                       ? proxyToolCall
                       : undefined
                   }
