@@ -16,12 +16,12 @@ import {
   XIcon,
   Loader2,
   AlertTriangleIcon,
-  Terminal,
+  Percent,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "ui/tooltip";
 import { Button } from "ui/button";
 import { Markdown } from "./markdown";
-import { cn, safeJSONParse, toAny } from "lib/utils";
+import { cn, isObject, safeJSONParse, toAny } from "lib/utils";
 import JsonView from "ui/json-view";
 import {
   useMemo,
@@ -79,7 +79,7 @@ import { DefaultToolName } from "lib/ai/tools";
 import { TavilyResponse } from "lib/ai/tools/web/web-search";
 
 import { CodeBlock } from "ui/CodeBlock";
-import { SafeJsExecutionResult } from "lib/safe-js-run";
+import { SafeJsExecutionResult, safeJsRun } from "lib/safe-js-run";
 
 type MessagePart = UIMessage["parts"][number];
 
@@ -1108,24 +1108,9 @@ export function SimpleJavascriptExecutionToolPart({
 
   const runCode = useCallback(
     async (code: string, input: any, timeout?: number) => {
-      const woker = new Worker(new URL("./safe-js-worker.ts", import.meta.url));
-
-      const job = new Promise((resolve) => {
-        woker.addEventListener("message", (e) => {
-          if (e.data.id != part.toolCallId) return;
-          resolve(e.data);
-        });
-        woker.postMessage({
-          type: "execute",
-          id: part.toolCallId,
-          payload: { code, input, timeout },
-        });
-      });
-
-      const result = await job;
-      woker.terminate();
+      const result = await safeJsRun(code, input, timeout);
       onResult?.({
-        ...toAny(result)?.result,
+        ...toAny(result),
         guide:
           "The code has already been executed and displayed to the user. Please provide only the output results from console.log() or error details if any occurred. Do not repeat the code itself.",
       });
@@ -1160,19 +1145,14 @@ export function SimpleJavascriptExecutionToolPart({
   const result = useMemo(() => {
     if (part.state != "result") return null;
     return part.result as SafeJsExecutionResult;
-  }, [part.state]);
+  }, [part]);
 
   return (
     <div className="flex flex-col">
       <div className="px-6 py-3">
         {!!part.args?.code && (
           <div className="border relative rounded-lg overflow-hidden bg-background shadow fade-in animate-in duration-500">
-            <div
-              className="py-2.5 px-4 flex items-center gap-1.5 z-20 border-b bg-background min-h-[37px]"
-              onClick={() => {
-                scrollToCode();
-              }}
-            >
+            <div className="py-2.5 px-4 flex items-center gap-1.5 z-20 border-b bg-background min-h-[37px]">
               {part.state != "result" ? (
                 <>
                   <Loader className="size-3 animate-spin text-muted-foreground" />
@@ -1188,7 +1168,11 @@ export function SimpleJavascriptExecutionToolPart({
                       <span className="text-destructive text-xs">ERROR</span>
                     </>
                   ) : (
-                    <Terminal className="size-3 text-muted-foreground" />
+                    <>
+                      <div className="text-[7px] bg-border rounded-xs w-4 h-4 p-0.5 flex items-end justify-end font-bold">
+                        JS
+                      </div>
+                    </>
                   )}
                 </>
               )}
@@ -1199,16 +1183,16 @@ export function SimpleJavascriptExecutionToolPart({
             </div>
             <div className="relative">
               <div
-                className={`z-10 absolute inset-0 w-full h-1/4 bg-gradient-to-b to-90%  to-transparent ${part.state != "result" ? "from-background" : "from-transparent pointer-events-none"}`}
+                className={`z-10 absolute inset-0 w-full h-1/4 bg-gradient-to-b to-90%  from-background to-transparent ${part.state != "result" ? "" : "h-1/8 pointer-events-none"}`}
               />
               <div
-                className={`z-10 absolute inset-0 w-1/4 h-full bg-gradient-to-r  to-transparent ${part.state != "result" ? "from-background" : "from-transparent pointer-events-none"}`}
+                className={`z-10 absolute inset-0 w-1/4 h-full bg-gradient-to-r from-background to-transparent ${part.state != "result" ? "" : "w-1/8 pointer-events-none"}`}
               />
               <div
-                className={`z-10 absolute left-0 bottom-0 w-full h-1/4 bg-gradient-to-t  to-transparent ${part.state != "result" ? "from-background" : "from-transparent pointer-events-none"}`}
+                className={`z-10 absolute left-0 bottom-0 w-full h-1/4 bg-gradient-to-t from-background to-transparent ${part.state != "result" ? "" : "h-1/8 pointer-events-none"}`}
               />
               <div
-                className={`z-10 absolute right-0 bottom-0 w-1/4 h-full bg-gradient-to-l  to-transparent ${part.state != "result" ? "from-background" : "from-transparent pointer-events-none"}`}
+                className={`z-10 absolute right-0 bottom-0 w-1/4 h-full bg-gradient-to-l from-background to-transparent ${part.state != "result" ? "" : "w-1/8 pointer-events-none"}`}
               />
 
               <div
@@ -1216,7 +1200,7 @@ export function SimpleJavascriptExecutionToolPart({
               >
                 <div>
                   <CodeBlock
-                    className="bg-background p-2"
+                    className="bg-background p-4 text-[10px]"
                     code={part.args?.code}
                     lang="javascript"
                     fallback={<CodeFallback />}
@@ -1224,13 +1208,43 @@ export function SimpleJavascriptExecutionToolPart({
                   <div ref={scrollContainerRef} />
                 </div>
               </div>
-
-              {result?.error && (
-                <div className="p-4 text-xs text-destructive">
-                  {result.error}
-                </div>
-              )}
             </div>
+            {(result?.logs?.length || 0) > 0 && (
+              <div className="p-4 text-[10px] text-foreground flex flex-col gap-1">
+                <div className="text-foreground flex items-center gap-1">
+                  <div className="w-1 h-1 mr-1 ring ring-border rounded-full" />{" "}
+                  better-chatbot
+                  <Percent className="size-2" />
+                </div>
+                {result?.logs?.map((log, i) => {
+                  return (
+                    <div
+                      key={i}
+                      className={cn(
+                        "flex items-center gap-1 text-muted-foreground pl-3",
+                        log.type == "error" && "text-destructive",
+                        log.type == "warn" && "text-yellow-500",
+                      )}
+                    >
+                      {log.type == "error" ? (
+                        <AlertTriangleIcon className="size-2" />
+                      ) : log.type == "warn" ? (
+                        <AlertTriangleIcon className="size-2" />
+                      ) : null}
+                      <div className="">
+                        {log.args
+                          .map((arg) =>
+                            isObject(arg)
+                              ? JSON.stringify(arg)
+                              : arg.toString(),
+                          )
+                          .join(" ")}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>

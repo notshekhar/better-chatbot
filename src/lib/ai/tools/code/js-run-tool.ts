@@ -41,6 +41,8 @@ IMPORTANT: This is NOT for building apps, UI components, or websites. Use only f
 LIMITATIONS: Browser Web Worker environment - no import/require, no DOM, no React/frameworks.
 Use console.log(),console.error() to output results.
 
+USAGE: When using this tool, you don't need to show the full code to the user beforehand. Just use the tool directly - the code will be visible in the tool execution.
+
 Example: Calculate sum of numbers
 {
   input: {numbers: [1,2,3]},

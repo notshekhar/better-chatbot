@@ -249,6 +249,10 @@ async function execute({
       executionTime: Date.now() - startTime,
     };
   } catch (error: any) {
+    logs.push({
+      type: "error",
+      args: [error],
+    });
     return {
       success: false,
       error: error.message || "Unknown execution error",
