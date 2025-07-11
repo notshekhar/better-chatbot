@@ -13,7 +13,6 @@ import {
   ToolMessagePart,
   ReasoningPart,
 } from "./message-parts";
-import { Think } from "ui/think";
 import { Terminal, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "ui/button";
 import { useTranslations } from "next-intl";
@@ -146,7 +145,6 @@ const PurePreviewMessage = ({
               );
             }
           })}
-          {isLoading && isLastMessage && <Think />}
         </div>
       </div>
     </div>
