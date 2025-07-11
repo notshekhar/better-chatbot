@@ -1147,6 +1147,17 @@ export function SimpleJavascriptExecutionToolPart({
     return part.result as SafeJsExecutionResult;
   }, [part]);
 
+  const logs = useMemo(() => {
+    const error = result?.error;
+    const logs = result?.logs || [];
+
+    if (error) {
+      return [{ type: "error", args: [error] }, ...logs];
+    }
+
+    return logs;
+  }, [part]);
+
   return (
     <div className="flex flex-col">
       <div className="px-6 py-3">
@@ -1209,29 +1220,33 @@ export function SimpleJavascriptExecutionToolPart({
                 </div>
               </div>
             </div>
-            {(result?.logs?.length || 0) > 0 && (
+            {logs.length > 0 && (
               <div className="p-4 text-[10px] text-foreground flex flex-col gap-1">
                 <div className="text-foreground flex items-center gap-1">
                   <div className="w-1 h-1 mr-1 ring ring-border rounded-full" />{" "}
                   better-chatbot
                   <Percent className="size-2" />
                 </div>
-                {result?.logs?.map((log, i) => {
+                {logs.map((log, i) => {
                   return (
                     <div
                       key={i}
                       className={cn(
-                        "flex items-center gap-1 text-muted-foreground pl-3",
+                        "flex gap-1 text-muted-foreground pl-3",
                         log.type == "error" && "text-destructive",
                         log.type == "warn" && "text-yellow-500",
                       )}
                     >
-                      {log.type == "error" ? (
-                        <AlertTriangleIcon className="size-2" />
-                      ) : log.type == "warn" ? (
-                        <AlertTriangleIcon className="size-2" />
-                      ) : null}
-                      <div className="">
+                      <div className="h-[15px] flex items-center pr-2">
+                        {log.type == "error" ? (
+                          <AlertTriangleIcon className="size-2" />
+                        ) : log.type == "warn" ? (
+                          <AlertTriangleIcon className="size-2" />
+                        ) : (
+                          <ChevronRight className="size-2" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
                         {log.args
                           .map((arg) =>
                             isObject(arg)

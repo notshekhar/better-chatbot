@@ -13,7 +13,14 @@ export function CodeBlock({
   lang,
   fallback,
   className,
-}: { code?: string; lang: string; fallback?: ReactNode; className?: string }) {
+  showLineNumbers = true,
+}: {
+  code?: string;
+  lang: string;
+  fallback?: ReactNode;
+  className?: string;
+  showLineNumbers?: boolean;
+}) {
   const { theme } = useTheme();
 
   const [component, setComponent] = useState<JSX.Element | null>(null);
@@ -35,9 +42,18 @@ export function CodeBlock({
                 {...props}
                 lang={lang}
                 style={undefined}
-                className={cn(props.className, "text-xs", className)}
+                className={cn(props.className, className)}
               >
-                {props.children}
+                <div className={cn(showLineNumbers && "pl-12 relative")}>
+                  {showLineNumbers && (
+                    <div className="absolute left-0 top-0 w-6 flex flex-col select-none text-right">
+                      {code?.split("\n").map((_, index) => (
+                        <span key={index}>{index + 1}</span>
+                      ))}
+                    </div>
+                  )}
+                  {props.children}
+                </div>
               </pre>
             ),
           },

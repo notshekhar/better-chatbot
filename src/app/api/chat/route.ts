@@ -105,22 +105,18 @@ export async function POST(request: Request) {
 
     const previousMessages = (thread?.messages ?? []).map(convertToMessage);
 
-    if (!thread) {
-      return new Response("Thread not found", { status: 404 });
-    }
-
-    const annotations = (message?.annotations as ChatMessageAnnotation[]) ?? [];
-
-    const mentions = annotations
-      .flatMap((annotation) => annotation.mentions)
-      .filter(Boolean) as ChatMention[];
-
     const messages: Message[] = isLastMessageUserMessage
       ? appendClientMessage({
           messages: previousMessages,
           message,
         })
       : previousMessages;
+
+    const userMessage = messages.slice(-2).findLast((m) => m.role == "user");
+
+    const mentions = (userMessage?.annotations as ChatMessageAnnotation[])
+      .flatMap((annotation) => annotation.mentions)
+      .filter(Boolean) as ChatMention[];
 
     const inProgressToolStep = extractInProgressToolPart(messages.slice(-2));
 
@@ -213,12 +209,6 @@ export async function POST(request: Request) {
           mentions.length ? mentionPrompt : undefined,
         );
 
-        // Precompute toolChoice to avoid repeated tool calls
-        const computedToolChoice =
-          isToolCallAllowed && mentions.length > 0 && inProgressToolStep
-            ? "required"
-            : "auto";
-
         const vercelAITooles = safe(MCP_TOOLS)
           .map((t) => {
             const bindingTools =
@@ -233,9 +223,7 @@ export async function POST(request: Request) {
           })
           .unwrap();
 
-        logger.debug(
-          `tool mode: ${toolChoice}, tool choice: ${computedToolChoice}`,
-        );
+        logger.debug(`tool mode: ${toolChoice}, mentions: ${mentions.length}`);
         logger.debug(
           `binding tool count APP_DEFAULT: ${Object.keys(APP_DEFAULT_TOOLS ?? {}).length}, MCP: ${Object.keys(MCP_TOOLS ?? {}).length}, Workflow: ${Object.keys(WORKFLOW_TOOLS ?? {}).length}`,
         );
@@ -250,7 +238,7 @@ export async function POST(request: Request) {
           experimental_transform: smoothStream({ chunking: "word" }),
           maxRetries: 1,
           tools: vercelAITooles,
-          toolChoice: computedToolChoice,
+          toolChoice: "auto",
           abortSignal: request.signal,
           onFinish: async ({ response, usage }) => {
             const appendMessages = appendResponseMessages({

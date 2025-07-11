@@ -30,8 +30,6 @@ const FORBIDDEN_KEYWORDS = [
   "globalThis",
   "self",
   "window",
-  "parent",
-  "top",
   "frames",
   "opener",
   // Code execution (but not function declarations)
@@ -42,21 +40,12 @@ const FORBIDDEN_KEYWORDS = [
   // Node.js environment
   "process",
   "require",
-  "module",
   "exports",
-  "__dirname",
-  "__filename",
-  "global",
   // Dangerous objects
   "Worker",
   "SharedWorker",
   "ServiceWorker",
   "MessageChannel",
-  // File system (limited in browser but still blocked)
-  "FileReader",
-  "Blob",
-  "File",
-  "FileSystem",
   // Network bypass attempts
   "XMLHttpRequest",
   "WebSocket",
@@ -67,7 +56,7 @@ const FORBIDDEN_KEYWORDS = [
 function validateCodeSafety(code: string): string | null {
   // Check forbidden keywords
   for (const keyword of FORBIDDEN_KEYWORDS) {
-    const regex = new RegExp(`\\b${keyword}\\b`, "i");
+    const regex = new RegExp(`\\b${keyword}\\b`);
     if (regex.test(code)) {
       return `Forbidden keyword: '${keyword}' - not allowed for security reasons`;
     }

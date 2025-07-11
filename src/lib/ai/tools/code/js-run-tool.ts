@@ -37,6 +37,7 @@ IMPORTANT: This is NOT for building apps, UI components, or websites. Use only f
 - Mathematical calculations
 - Data processing and analysis  
 - Simple computations
+- Testing simple functions (vanilla JS only, no external modules)
 
 LIMITATIONS: Browser Web Worker environment - no import/require, no DOM, no React/frameworks.
 Use console.log(),console.error() to output results.
