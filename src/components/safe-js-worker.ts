@@ -11,21 +11,21 @@ self.onmessage = async function (e) {
 
     try {
       const result = await safeJsRun(code, input, timeout);
-      console.log("woker", {
-        result,
-      });
       // Send result back to main thread
       self.postMessage({
         id: id,
-        ...result,
+        isError: false,
+        result,
       });
     } catch (error: any) {
       // Send error back to main thread
       self.postMessage({
         id: id,
         isError: true,
-        error: error.message || "Execution failed",
-        solution: "Failed to execute JavaScript code. Please try again.",
+        result: {
+          error: error.message || "Execution failed",
+          solution: "Failed to execute JavaScript code. Please try again.",
+        },
       });
     }
   }

@@ -1,3 +1,4 @@
+"use client";
 // Core JavaScript execution engine with security sandbox
 
 import { safe } from "ts-safe";
@@ -14,7 +15,7 @@ type SafeRunOptions = {
   onLog?: (entry: LogEntry) => void;
 };
 
-type ExecutionResult = {
+export type SafeJsExecutionResult = {
   success: boolean;
   logs: LogEntry[];
   error?: string;
@@ -24,10 +25,11 @@ type ExecutionResult = {
 // Security: Block dangerous keywords that could compromise sandbox
 const FORBIDDEN_KEYWORDS = [
   // DOM and browser globals
-  "window",
+  "self",
   "document",
   "globalThis",
   "self",
+  "window",
   "parent",
   "top",
   "frames",
@@ -169,14 +171,14 @@ function createSafeEnvironment(
     decodeURIComponent: decodeURIComponent,
 
     // Safe browser APIs (if available)
-    ...(typeof window !== "undefined" && {
-      fetch: window.fetch.bind(window),
-      setTimeout: window.setTimeout.bind(window),
-      setInterval: window.setInterval.bind(window),
-      clearTimeout: window.clearTimeout.bind(window),
-      clearInterval: window.clearInterval.bind(window),
-      btoa: window.btoa.bind(window),
-      atob: window.atob.bind(window),
+    ...(typeof self !== "undefined" && {
+      fetch: self.fetch.bind(self),
+      setTimeout: self.setTimeout.bind(self),
+      setInterval: self.setInterval.bind(self),
+      clearTimeout: self.clearTimeout.bind(self),
+      clearInterval: self.clearInterval.bind(self),
+      btoa: self.btoa.bind(self),
+      atob: self.atob.bind(self),
     }),
   };
 
@@ -193,7 +195,7 @@ async function execute({
   input = {},
   timeout = 5000,
   onLog,
-}: SafeRunOptions): Promise<ExecutionResult> {
+}: SafeRunOptions): Promise<SafeJsExecutionResult> {
   const startTime = Date.now();
   const logs: LogEntry[] = [];
 

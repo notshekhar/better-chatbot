@@ -17,14 +17,11 @@ import {
   Loader2,
   AlertTriangleIcon,
   Terminal,
-  InfoIcon,
-  BugIcon,
-  CodeXmlIcon,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "ui/tooltip";
 import { Button } from "ui/button";
 import { Markdown } from "./markdown";
-import { cn, isObject, safeJSONParse } from "lib/utils";
+import { cn, safeJSONParse, toAny } from "lib/utils";
 import JsonView from "ui/json-view";
 import {
   useMemo,
@@ -82,7 +79,7 @@ import { DefaultToolName } from "lib/ai/tools";
 import { TavilyResponse } from "lib/ai/tools/web/web-search";
 
 import { CodeBlock } from "ui/CodeBlock";
-import { safeJsRun } from "lib/safe-js-run";
+import { SafeJsExecutionResult } from "lib/safe-js-run";
 
 type MessagePart = UIMessage["parts"][number];
 
@@ -517,7 +514,7 @@ export const ToolMessagePart = memo(
         }
       }
       return null;
-    }, [toolName, state, onPoxyToolCall, result]);
+    }, [toolName, state, onPoxyToolCall, result, args]);
 
     const isWorkflowTool = isVercelAIWorkflowTool(result);
 
@@ -1107,7 +1104,7 @@ export function SimpleJavascriptExecutionToolPart({
 }) {
   const isRun = useRef(false);
 
-  const blockRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const runCode = useCallback(
     async (code: string, input: any, timeout?: number) => {
@@ -1127,10 +1124,22 @@ export function SimpleJavascriptExecutionToolPart({
 
       const result = await job;
       woker.terminate();
-      onResult?.(result);
+      onResult?.({
+        ...toAny(result)?.result,
+        guide:
+          "The code has already been executed and displayed to the user. Please provide only the output results from console.log() or error details if any occurred. Do not repeat the code itself.",
+      });
     },
     [onResult],
   );
+
+  const scrollToCode = useCallback(() => {
+    scrollContainerRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "nearest",
+    });
+  }, []);
 
   useEffect(() => {
     if (onResult && part.args && part.state == "call" && !isRun.current) {
@@ -1141,14 +1150,16 @@ export function SimpleJavascriptExecutionToolPart({
 
   useEffect(() => {
     if (part.state != "result") {
-      const closeKey = setTimeout(() => {
-        blockRef.current?.scrollTo({
-          top: blockRef.current?.scrollHeight,
-          behavior: "smooth",
-        });
-      }, 500);
+      const closeKey = setTimeout(scrollToCode, 300);
       return () => clearTimeout(closeKey);
+    } else {
+      scrollToCode();
     }
+  }, [part.state]);
+
+  const result = useMemo(() => {
+    if (part.state != "result") return null;
+    return part.result as SafeJsExecutionResult;
   }, [part.state]);
 
   return (
@@ -1156,7 +1167,12 @@ export function SimpleJavascriptExecutionToolPart({
       <div className="px-6 py-3">
         {!!part.args?.code && (
           <div className="border relative rounded-lg overflow-hidden bg-background shadow fade-in animate-in duration-500">
-            <div className="py-2.5 px-4 flex items-center gap-1.5 z-20 border-b bg-background min-h-[37px]">
+            <div
+              className="py-2.5 px-4 flex items-center gap-1.5 z-20 border-b bg-background min-h-[37px]"
+              onClick={() => {
+                scrollToCode();
+              }}
+            >
               {part.state != "result" ? (
                 <>
                   <Loader className="size-3 animate-spin text-muted-foreground" />
@@ -1165,9 +1181,16 @@ export function SimpleJavascriptExecutionToolPart({
                   </TextShimmer>
                 </>
               ) : (
-                <span className="text-muted-foreground text-xs">
-                  javascript
-                </span>
+                <>
+                  {result?.error ? (
+                    <>
+                      <AlertTriangleIcon className="size-3 text-destructive" />
+                      <span className="text-destructive text-xs">ERROR</span>
+                    </>
+                  ) : (
+                    <Terminal className="size-3 text-muted-foreground" />
+                  )}
+                </>
               )}
               <div className="flex-1" />
               <div className="w-1.5 h-1.5 rounded-full bg-input" />
@@ -1187,18 +1210,26 @@ export function SimpleJavascriptExecutionToolPart({
               <div
                 className={`z-10 absolute right-0 bottom-0 w-1/4 h-full bg-gradient-to-l  to-transparent ${part.state != "result" ? "from-background" : "from-transparent pointer-events-none"}`}
               />
+
               <div
-                className={`min-h-14 p-6 text-xs overflow-y-auto transition-height duration-1000 ${part.state != "result" ? "max-h-32" : "max-h-60"}`}
+                className={`min-h-14 p-6 text-xs overflow-y-auto transition-height duration-1000 max-h-60`}
               >
-                <div ref={blockRef}>
+                <div>
                   <CodeBlock
                     className="bg-background p-2"
                     code={part.args?.code}
                     lang="javascript"
                     fallback={<CodeFallback />}
                   />
+                  <div ref={scrollContainerRef} />
                 </div>
               </div>
+
+              {result?.error && (
+                <div className="p-4 text-xs text-destructive">
+                  {result.error}
+                </div>
+              )}
             </div>
           </div>
         )}

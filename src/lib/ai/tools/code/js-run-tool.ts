@@ -31,21 +31,17 @@ export const jsExecutionSchema: JSONSchema7 = {
 };
 
 export const jsExecutionTool = createTool({
-  description: `Execute JavaScript code safely in a sandboxed environment for generating accurate data and calculations.
+  description: `Execute JavaScript code for data calculations and processing only.
 
-PURPOSE: Use this tool to generate precise, calculated data through JavaScript computation.
+IMPORTANT: This is NOT for building apps, UI components, or websites. Use only for:
+- Mathematical calculations
+- Data processing and analysis  
+- Simple computations
 
-SECURITY: Runs in restricted sandbox - no DOM, file system, or server access.
-AVAILABLE APIS: Math, JSON, Date, Array, Object, String, Number, fetch, setTimeout, console methods
+LIMITATIONS: Browser Web Worker environment - no import/require, no DOM, no React/frameworks.
+Use console.log(),console.error() to output results.
 
-OUTPUT: Use console methods to output results:
-- console.log(result) - Main results
-- console.error(error) - Errors  
-- console.info(info) - Information
-
-INPUT: All input properties become variables in your code.
-
-Example: 
+Example: Calculate sum of numbers
 {
   input: {numbers: [1,2,3]},
   code: "const sum = numbers.reduce((a, b) => a + b, 0); console.log('Total:', sum);"
