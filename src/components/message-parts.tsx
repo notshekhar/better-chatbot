@@ -362,7 +362,7 @@ export const AssistMessagePart = memo(function AssistMessagePart({
                 {/* </SelectModel> */}
               </div>
             </TooltipTrigger>
-            <TooltipContent>Change Model</TooltipContent>
+            <TooltipContent>Reload Chat</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
