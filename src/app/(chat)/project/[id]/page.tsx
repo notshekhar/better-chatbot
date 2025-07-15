@@ -184,6 +184,7 @@ export default function ProjectPage() {
           setInput={setInput}
           isLoading={isLoading}
           onStop={stop}
+          threadId={threadId}
         />
         <div className="flex my-4 mx-2 gap-4">
           <FeatureCard

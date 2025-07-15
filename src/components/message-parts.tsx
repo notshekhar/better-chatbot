@@ -9,7 +9,6 @@ import {
   ChevronDownIcon,
   RefreshCw,
   X,
-  Wrench,
   Trash2,
   ChevronRight,
   TriangleAlert,
@@ -18,6 +17,7 @@ import {
   AlertTriangleIcon,
   Percent,
   GitBranch,
+  HammerIcon,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "ui/tooltip";
 import { Button } from "ui/button";
@@ -47,12 +47,7 @@ import {
 
 import { toast } from "sonner";
 import { safe } from "ts-safe";
-import {
-  ChatMentionSchema,
-  ChatMessageAnnotation,
-  ChatModel,
-  ClientToolInvocation,
-} from "app-types/chat";
+import { ChatModel, ClientToolInvocation } from "app-types/chat";
 
 import { Skeleton } from "ui/skeleton";
 import { PieChart } from "./tool-invocation/pie-chart";
@@ -61,7 +56,7 @@ import { LineChart } from "./tool-invocation/line-chart";
 import { useTranslations } from "next-intl";
 import { extractMCPToolId } from "lib/ai/mcp/mcp-tool-id";
 import { Separator } from "ui/separator";
-import { ChatMentionInputMentionItem } from "./chat-mention-input";
+
 import { TextShimmer } from "ui/text-shimmer";
 import equal from "lib/equal";
 import {
@@ -134,15 +129,6 @@ export const UserMessagePart = memo(function UserMessagePart({
   const [mode, setMode] = useState<"view" | "edit">("view");
   const [isDeleting, setIsDeleting] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const mentions = useMemo(() => {
-    return (message.annotations ?? [])
-      .flatMap((annotation) => {
-        return (annotation as ChatMessageAnnotation).mentions ?? [];
-      })
-      .filter((mention) => {
-        return ChatMentionSchema.safeParse(mention).success;
-      });
-  }, [message.annotations]);
 
   const deleteMessage = useCallback(() => {
     safe(() => setIsDeleting(true))
@@ -185,7 +171,7 @@ export const UserMessagePart = memo(function UserMessagePart({
       <div
         data-testid="message-content"
         className={cn(
-          "flex flex-col gap-4 max-w-full",
+          "flex flex-col gap-4 max-w-full ring ring-input",
           {
             "bg-accent text-accent-foreground px-4 py-3 rounded-2xl": isLast,
             "opacity-50": isError,
@@ -197,19 +183,6 @@ export const UserMessagePart = memo(function UserMessagePart({
           {part.text}
         </p>
       </div>
-      {isLast && mentions.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-          {mentions.map((mention, i) => {
-            return (
-              <ChatMentionInputMentionItem
-                key={i}
-                id={JSON.stringify(mention)}
-                className="mx-0"
-              />
-            );
-          })}
-        </div>
-      )}
       {isLast && (
         <div className="flex w-full justify-end opacity-0 group-hover/message:opacity-100 transition-opacity duration-300">
           <Tooltip>
@@ -592,7 +565,7 @@ export const ToolMessagePart = memo(
                     </AvatarFallback>
                   </Avatar>
                 ) : (
-                  <Wrench className="size-3.5" />
+                  <HammerIcon className="size-3.5" />
                 )}
               </div>
               <span className="font-bold flex items-center gap-2">
@@ -1039,7 +1012,7 @@ export function WorkflowToolDetail({
     if (result.status == "fail")
       return (
         <Alert variant={"destructive"} className="border-destructive">
-          <AlertTriangleIcon />
+          <AlertTriangleIcon className="size-3" />
           <AlertTitle>{result?.error?.name || "ERROR"}</AlertTitle>
           <AlertDescription>{result.error?.message}</AlertDescription>
         </Alert>
