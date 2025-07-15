@@ -14,7 +14,7 @@ export type ChatThread = {
   userId: string;
   createdAt: Date;
   projectId: string | null;
-  parentThreadId: string | null;
+  parentThreadId?: string | null;
 };
 
 export type Project = {

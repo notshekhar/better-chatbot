@@ -28,7 +28,7 @@ export const pgChatRepository: ChatRepository = {
         userId: thread.userId,
         projectId: thread.projectId,
         id: thread.id,
-        parentThreadId: thread.parentThreadId,
+        parentThreadId: thread.parentThreadId || null,
       })
       .returning();
     return result;
