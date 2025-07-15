@@ -186,7 +186,7 @@ function ThreadDropdownComponent() {
       >
         <Button
           variant="ghost"
-          className="hover:text-foreground cursor-pointer flex gap-1 items-center px-2 py-1 rounded-md hover:bg-accent"
+          className="data-[state=open]:bg-input! hover:text-foreground cursor-pointer flex gap-1 items-center px-2 py-1 rounded-md hover:bg-accent"
         >
           {currentThread.parentThreadId && (
             <GitBranch className="mr-1 h-3 w-3 text-muted-foreground flex-shrink-0" />
